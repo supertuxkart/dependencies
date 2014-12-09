@@ -1,4 +1,7 @@
-dependencies
+Dependencies
 ============
 
-The dependency package for various platforms
+The dependency package for various platforms:
+
+windows: for Visual Studio
+
