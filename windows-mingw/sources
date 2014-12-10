@@ -1,0 +1,12 @@
+Here the home pages of all libraries used in SuperTuxKart.
+From those pages the recent source code can be found and downloaded.
+
+curl:       http://curl.haxx.se/
+fribidi:    http://fribidi.org/
+ogg, vorbis
+vorbisfile: http://xiph.org/ogg/
+openal:     http://www.openal.org 
+            But also http://sourceforge.net/projects/openal-soft http://kcat.strangesoft.net/openal.html
+pthread:    https://www.sourceware.org/pthreads-win32/
+wiiuse:     https://github.com/rpavlik/wiiuse
+            (sources also included in our source distribution)
