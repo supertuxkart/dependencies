@@ -43,15 +43,15 @@ Open build directory in terminal and use cmake:
 If cmake didn't show any errors, you can use:
     mingw32-make
 
+Now you should be able to execute binary:
+- open stk-code directory in terminal
+- run build\bin\supertuxkart.exe
+
 If you want to have your game portable, after compilation you need to copy
 libgcc_s_dw2-1.dll libstdc++-6.dll libgomp-1.dll and libwinpthread-1.dll
 libraries from your compiler path to build\bin folder. They are not included in
 dependencies because they are compiler-specific files. Other files should be
 already copied to bin directory.
-
-Now you should be able to execute binary:
-- open stk-code directory in terminal
-- run build\bin\supertuxkart.exe
 
 You can also copy all needed files to one directory. It should have following
 structure:
@@ -66,3 +66,14 @@ structure:
   > *.dll   (copied from build\bin)
 
 Make install is not supported atm. (it won't install .dll files).
+
+================================================================================
+
+You can also use this package to cross-compile Windows binary under Linux. To
+do it, just open your build directory and use:
+
+    cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-mingw.cmake
+
+Note that this toolchain file is prepared for Ubuntu 14.10. It may or may not
+work with other distributions. You also need MinGW compiler (can be downloaded
+from Ubuntu repositories).
