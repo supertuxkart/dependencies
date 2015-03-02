@@ -47,25 +47,8 @@ Now you should be able to execute binary:
 - open stk-code directory in terminal
 - run build\bin\supertuxkart.exe
 
-If you want to have your game portable, after compilation you need to copy
-libgcc_s_dw2-1.dll libstdc++-6.dll libgomp-1.dll and libwinpthread-1.dll
-libraries from your compiler path to build\bin folder. They are not included in
-dependencies because they are compiler-specific files. Other files should be
-already copied to bin directory.
-
-You can also copy all needed files to one directory. It should have following
-structure:
-> supertuxkart
-  > data   (copied from stk-code\data)
-    > gfx
-    > gui
-    > karts   (copied from stk-assets)
-    > tracks   (copied from stk-assets)
-    > ...
-  > supertuxkart.exe   (copied from build\bin)
-  > *.dll   (copied from build\bin)
-
-Make install is not supported atm. (it won't install .dll files).
+If you want to install game in Program Files directory, you can use:
+    mingw32-make install
 
 ================================================================================
 
