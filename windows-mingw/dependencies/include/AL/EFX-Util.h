@@ -6,6 +6,15 @@
 *                                                                   *
 \*******************************************************************/
 
+#ifndef EFX_UTIL_H_INCLUDED
+#define EFX_UTIL_H_INCLUDED
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+#pragma pack(push, 4)
+
 #ifndef EAXVECTOR_DEFINED
 #define EAXVECTOR_DEFINED
 typedef struct _EAXVECTOR {
@@ -114,11 +123,17 @@ typedef struct _EFXLOWPASSFILTER
 } EFXLOWPASSFILTER, *LPEFXLOWPASSFILTER;
 #endif
 
-void ConvertReverbParameters(EAXREVERBPROPERTIES *pEAXProp, EFXEAXREVERBPROPERTIES *pEFXEAXReverb);
-void ConvertObstructionParameters(EAXOBSTRUCTIONPROPERTIES *pObProp, EFXLOWPASSFILTER *pDirectLowPassFilter);
-void ConvertExclusionParameters(EAXEXCLUSIONPROPERTIES *pExProp, EFXLOWPASSFILTER *pSendLowPassFilter);
-void ConvertOcclusionParameters(EAXOCCLUSIONPROPERTIES *pOcProp, EFXLOWPASSFILTER *pDirectLowPassFilter, EFXLOWPASSFILTER *pSendLowPassFilter);
+#ifdef EFXUTILDLL_EXPORTS
+ #define EFX_API __declspec(dllexport)
+#else
+ #define EFX_API
+#endif
 
+EFX_API void __cdecl ConvertReverbParameters(EAXREVERBPROPERTIES *pEAXProp, EFXEAXREVERBPROPERTIES *pEFXEAXReverb);
+EFX_API void __cdecl ConvertObstructionParameters(EAXOBSTRUCTIONPROPERTIES *pObProp, EFXLOWPASSFILTER *pDirectLowPassFilter);
+EFX_API void __cdecl ConvertExclusionParameters(EAXEXCLUSIONPROPERTIES *pExProp, EFXLOWPASSFILTER *pSendLowPassFilter);
+EFX_API void __cdecl ConvertOcclusionParameters(EAXOCCLUSIONPROPERTIES *pOcProp, EFXLOWPASSFILTER *pDirectLowPassFilter, EFXLOWPASSFILTER *pSendLowPassFilter);
+EFX_API void __cdecl AdjustEnvironmentSize(EAXREVERBPROPERTIES *pEAXProp, float flEnvironmentSize);
 
 /***********************************************************************************************\
 *
@@ -377,7 +392,7 @@ void ConvertOcclusionParameters(EAXOCCLUSIONPROPERTIES *pOcProp, EFXLOWPASSFILTE
 
 //	Env		Size	Diffus	Room	RoomHF	RoomLF	DecTm	DcHF	DcLF	Refl	RefDel	Ref Pan				Revb	RevDel		Rev Pan				EchTm	EchDp	ModTm	ModDp	AirAbs	HFRef		LFRef	RRlOff	FLAGS
 #define REVERB_PRESET_DRIVING_COMMENTATOR \
-	{ 26,   3.0f,	0.000f, 1000,   -500,   -600,	2.42f,	0.88f,	0.68f,  -1400,	0.093f, 0.00f,0.00f,0.00f,	-1200,	0.017f,		0.00f,0.00f,0.00f,	0.250f, 1.000f, 0.250f, 0.000f, -10.0f,  5000.0f,	250.0f,  0.00f, 0x20 }
+	{ 26,   3.0f,	0.000f, -1000,  -500,   -600,	2.42f,	0.88f,	0.68f,  -1400,	0.093f, 0.00f,0.00f,0.00f,	-1200,	0.017f,		0.00f,0.00f,0.00f,	0.250f, 1.000f, 0.250f, 0.000f, -10.0f,  5000.0f,	250.0f,  0.00f, 0x20 }
 #define REVERB_PRESET_DRIVING_PITGARAGE \
 	{ 26,   1.9f,	0.590f, -1000,  -300,   -500,	1.72f,	0.93f,	0.87f,  -500,	0.000f, 0.00f,0.00f,0.00f,	200,		0.016f,		0.00f,0.00f,0.00f,	0.250f, 0.110f, 0.250f, 0.000f, -5.0f,  5000.0f,	250.0f,  0.00f, 0x0 }
 #define REVERB_PRESET_DRIVING_INCAR_RACER \
@@ -420,3 +435,12 @@ void ConvertOcclusionParameters(EAXOCCLUSIONPROPERTIES *pOcProp, EFXLOWPASSFILTE
 	{ 26,  19.6f,	0.840f,	-1000,  -500,	0,		4.62f,	0.64f,	1.23f,  -700,	0.032f,	0.00f,0.00f,0.00f,	-200,	0.049f,		0.00f,0.00f,0.00f,	0.250f, 0.000f, 0.250f, 0.110f, -5.0f,  5000.0f,	250.0f, 0.00f,	0x3f }
 #define REVERB_PRESET_SMALLWATERROOM \
 	{ 26,  36.2f,	0.700f, -1000,  -698,   0,		1.51f,	1.25f,	1.14f,  -100,	0.020f, 0.00f,0.00f,0.00f,	300,	0.030f,		0.00f,0.00f,0.00f,	0.179f, 0.150f, 0.895f, 0.190f, -7.0f,  5000.0f,	250.0f, 0.00f, 0x0 }
+
+
+#pragma pack(pop)
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#endif // EFX-UTIL_H_INCLUDED
