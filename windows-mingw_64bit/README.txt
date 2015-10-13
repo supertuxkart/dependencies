@@ -1,0 +1,86 @@
+This subdirectory includes all files necessary to compile 64-bit version of
+SuperTuxKart with gcc compiler on Windows.
+
+Copy these files into the SuperTuxKart code directory (so that the directory
+'dependencies' is next to src and data). This dependency package also includes
+the necessary .dll files which are needed to run the game.
+
+Source tree should look as follow:
+> supertuxkart
+  > stk-assets
+    > karts
+    > tracks
+    > ...
+  > stk-code
+    > build
+    > data
+    > dependencies
+    > src
+    > ...
+
+================================================================================
+
+Here is some info how to compile STK on Windows using gcc:
+
+The only one supported mingw project is mingw-w64. Additionally you need its
+"sjlj" or "seh" version because they allow to compile 64-bit applications.
+The "dw" version will not work.
+
+You can get MinGW in few different ways:
+- using installer:
+  http://sourceforge.net/projects/mingw-w64/files/latest/download
+- by downloading 64-bit "seh" version:
+  http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/4.9.3/threads-posix/seh/x86_64-4.9.3-release-posix-seh-rt_v4-rev1.7z/download
+- by downloading 32-bit "sjlj" version, which allows to compile 64-bit apps:
+  http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/4.9.3/threads-posix/sjlj/i686-4.9.3-release-posix-sjlj-rt_v4-rev1.7z/download
+
+Install it in "c:\MinGW" directory using default settings.
+
+Add path to compiler to your PATH environment variable.
+- Run to: My Computer -> Properties -> Advanced system settings ->
+  -> Environment variables
+- Look at system variables and find there PATH variable
+- It will look for example:
+  "c:\MinGW\bin;C:\Program Files\CMake\bin;%SystemRoot%\system32;%SystemRoot%"
+
+You should also add there path to cmake tool for more comfortable work. Note
+that you cannot have there path to cygwin directory at the same time.
+
+Open build directory in terminal. If you downloaded "seh" version, just run:
+
+    cmake .. -G "MinGW Makefiles"
+
+If you downloaded "sjlj" version, run instead of this:
+
+    cmake .. -G "MinGW Makefiles" -DCMAKE_RC_FLAGS="-F pe-x86-64" -DCMAKE_C_FLAGS=-m64 -DCMAKE_CXX_FLAGS=-m64
+
+If cmake didn't show any errors, you can use:
+
+    mingw32-make
+
+Now you should be able to execute binary:
+- open stk-code directory in terminal
+- run build\bin\supertuxkart.exe
+
+If you want to install game in Program Files directory, you can use:
+
+    mingw32-make install
+
+================================================================================
+
+You can also use this package to cross-compile Windows binary under Linux. This
+method seems to be the easiest, because it is very similar to linux compilation.
+
+To do it, just open your build directory and use:
+
+    cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-mingw-64bit.cmake
+
+If cmake didn't show any errors, run:
+
+    make
+
+Note that this toolchain file is prepared for Ubuntu 14.10. It may or may not
+work with other distributions. You also need MinGW compiler (can be downloaded
+from Ubuntu repositories). To install it run:
+
+    sudo apt-get install gcc-mingw-w64 g++-mingw-w64 binutils-mingw-w64 mingw-w64-tools
