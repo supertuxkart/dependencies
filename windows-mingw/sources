@@ -2,6 +2,7 @@ Here the home pages of all libraries used in SuperTuxKart.
 From those pages the recent source code can be found and downloaded.
 
 curl:       http://curl.haxx.se/
+freetype:   http://git.savannah.gnu.org/cgit/freetype/freetype2.git/
 fribidi:    http://fribidi.org/
 ogg, vorbis
 vorbisfile: http://xiph.org/ogg/
