@@ -91,6 +91,8 @@ typedef enum
     OGR_CBT_START_RECORDING = 0,
     /**
      * A \ref StringCallback which notify the saved filename of recorded file.
+     * This will not be shown if \ref ogrDestroy is called anywhere, which
+     * avoid calling the user_data potentially deleted by user of this library.
      */
     OGR_CBT_SAVED_RECORDING,
     /**
@@ -99,15 +101,12 @@ typedef enum
      */
     OGR_CBT_ERROR_RECORDING,
     /**
-     * A \ref IntCallback which the tells the progress percentage for video
-     * encoding after the issue of \ref ogrStopCapture.
+     * A \ref IntCallback which the tells the progress in percentage about
+     * video encoding after the issue of \ref ogrStopCapture. This will not be
+     * shown if \ref ogrDestroy is called anywhere, which avoid calling the
+     * user_data potentially deleted by user of this library.
      */
     OGR_CBT_PROGRESS_RECORDING,
-    /**
-     * A \ref GeneralCallback which notify user if there is still video
-     * encoding happening after the issue of \ref ogrStopCapture.
-     */
-    OGR_CBT_WAIT_RECORDING,
     /**
      * Total callback numbers.
      */
@@ -175,6 +174,8 @@ typedef void(*ogrFucBufferData)(unsigned int, ptrdiff_t, const void*,
     unsigned int);
 typedef void(*ogrFucDeleteBuffers)(int, const unsigned int*);
 typedef void*(*ogrFucMapBuffer)(unsigned int, unsigned int);
+typedef void*(*ogrFucMapBufferRange)(unsigned int, ptrdiff_t, ptrdiff_t,
+    unsigned int);
 typedef unsigned char(*ogrFucUnmapBuffer)(unsigned int);
 
 #ifdef  __cplusplus
@@ -241,6 +242,23 @@ void ogrRegReadPixelsFunction(ogrFucReadPixels);
 void ogrRegPBOFunctions(ogrFucGenBuffers, ogrFucBindBuffer, ogrFucBufferData,
                         ogrFucDeleteBuffers, ogrFucMapBuffer,
                         ogrFucUnmapBuffer);
+/**
+ * Set opengl functions for using PBOs with glMapBufferRange (required if
+ * triple buffering is used), useful for OpenGL ES 3.
+ */
+void ogrRegPBOFunctionsRange(ogrFucGenBuffers, ogrFucBindBuffer, ogrFucBufferData,
+                             ogrFucDeleteBuffers, ogrFucMapBufferRange,
+                             ogrFucUnmapBuffer);
+/**
+ * Check if an audio encoder in \ref AudioFormat is supported.
+ * Return 1 if supported.
+ */
+int ogrCheckAudioEncoder(AudioFormat);
+/**
+ * Check if a video encoder in \ref VideoFormat is supported.
+ * Return 1 if supported.
+ */
+int ogrCheckVideoEncoder(VideoFormat);
 #ifdef  __cplusplus
 }
 #endif
