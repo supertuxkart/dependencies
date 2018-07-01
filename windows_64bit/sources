@@ -6,8 +6,7 @@ freetype:   http://git.savannah.gnu.org/cgit/freetype/freetype2.git/
 fribidi:    http://fribidi.org/
 ogg, vorbis
 vorbisfile: http://xiph.org/ogg/
-openal:     http://www.openal.org 
-            But also http://sourceforge.net/projects/openal-soft http://kcat.strangesoft.net/openal.html
+openal:     http://sourceforge.net/projects/openal-soft http://kcat.strangesoft.net/openal.html
 pthread:    https://www.sourceware.org/pthreads-win32/
 wiiuse:     https://github.com/rpavlik/wiiuse
             (sources also included in our source distribution)
