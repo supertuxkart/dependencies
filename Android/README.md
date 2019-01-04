@@ -1,5 +1,6 @@
 This subdirectory contains packed sources of libraries that are used in STK and
 that are not included in the stk-code repository. They precisely are:
+
  - Curl
  - Freetype
  - Ifaddrs
@@ -13,6 +14,7 @@ build script.
 
 You need to extract this packed file to stk-code/lib directory, so that the
 directory will have following structure:
+
 > stk-code
   > build
   > data
