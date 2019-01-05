@@ -1,4 +1,5 @@
 # SuperTuxKart compilation with MinGW
+=====================================
 
 This subdirectory includes all files necessary to compile SuperTuxKart with the 
 gcc compiler on Windows.
@@ -10,21 +11,20 @@ to run the game.
 
 The source tree should look as follows:
 
-> supertuxkart
-  > stk-assets
-    > karts
-    > tracks
-    > ...
-  > stk-code
-    > build
-    > data
-    > dependencies-mingw-64bit (dependencies-mingw for 32-bit version) 
-    > src
-    > ...
-
-================================================================================
+- supertuxkart
+  - stk-assets
+    - karts
+    - tracks
+    - ...
+  - stk-code
+    - build
+    - data
+    - dependencies-mingw-64bit (dependencies-mingw for 32-bit version) 
+    - src
+    - ...
 
 ## MinGW compilation on Windows
+===============================
 
 Here is some info how to compile STK on Windows using gcc:
 
@@ -40,7 +40,7 @@ Next, add the path to the compiler and CMake bin to your PATH environment
 variable.
 
 - Run to: My Computer -> Properties -> Advanced system settings ->
-  -> Environment variables
+    Environment variables
 - Look at system variables and find the PATH variable
 - Add the paths. It should look something like this:
 
@@ -69,9 +69,8 @@ If you want to install the game in the Program Files directory, you can use:
 
     mingw32-make install
 
-================================================================================
-
 ## MinGW cross-compilation on Linux
+===================================
 
 You can also use this package to cross-compile a Windows binary under Linux. To 
 do it, just open your build directory and use:

@@ -11,14 +11,14 @@ necessary .dll files which are needed to run the game.
 
 The source tree should look as follows:
 
-> supertuxkart
-  > stk-assets
-    > karts
-    > tracks
-    > ...
-  > stk-code
-    > build
-    > data
-    > dependencies-vs-64bit (dependencies-vs for 32-bit version)
-    > src
-    > ...
+- supertuxkart
+  - stk-assets
+    - karts
+    - tracks
+    - ...
+  - stk-code
+    - build
+    - data
+    - dependencies-vs-64bit (dependencies-vs for 32-bit version)
+    - src
+    - ...
