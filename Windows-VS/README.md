@@ -1,7 +1,7 @@
 ## SuperTuxKart compilation with VS
 
 This subdirectory contains all necessary dependencies to compile 
-SuperTuxKart with Visual Studio 12 or later (including the free 
+SuperTuxKart with Visual Studio 2013 or later (including the free 
 express version).
 
 Unzip these files into the SuperTuxKart code directory (so that 
@@ -11,14 +11,14 @@ necessary .dll files which are needed to run the game.
 
 The source tree should look as follows:
 
-- supertuxkart
-  - stk-assets
-    - karts
-    - tracks
+- `supertuxkart`
+  - `stk-assets`
+    - `karts`
+    - `tracks`
     - ...
-  - stk-code
-    - build
-    - data
-    - dependencies-vs-64bit (dependencies-vs for 32-bit version)
-    - src
+  - `stk-code`
+    - `build`
+    - `data`
+    - `dependencies-vs-64bit` (`dependencies-vs` for 32-bit version)
+    - `src`
     - ...
