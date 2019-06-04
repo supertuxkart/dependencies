@@ -2,12 +2,6 @@
 /* FriBidi
  * fribidi-joining-types-list.h - list of joining types
  *
- * $Id: fribidi-joining-types-list.h,v 1.2 2004/06/15 11:52:02 behdad Exp $
- * $Author: behdad $
- * $Date: 2004/06/15 11:52:02 $
- * $Revision: 1.2 $
- * $Source: /cvs/fribidi/fribidi2/lib/fribidi-joining-types-list.h,v $
- *
  * Author:
  *   Behdad Esfahbod, 2004
  *
@@ -26,10 +20,10 @@
  * 
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library, in a file named COPYING; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA
+ * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301, USA
  *
- * For licensing issues, contact <license@farsiweb.info>.
+ * For licensing issues, contact <fribidi.license@gmail.com>.
  */
 /* *INDENT-OFF* */
 #endif /* !__FRIBIDI_DOC */

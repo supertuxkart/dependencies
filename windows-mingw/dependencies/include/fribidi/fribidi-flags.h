@@ -1,12 +1,6 @@
 /* FriBidi
  * fribidi-flags.h - option flags
  *
- * $Id: fribidi-flags.h,v 1.1 2005/11/03 01:39:01 behdad Exp $
- * $Author: behdad $
- * $Date: 2005/11/03 01:39:01 $
- * $Revision: 1.1 $
- * $Source: /cvs/fribidi/fribidi2/lib/fribidi-flags.h,v $
- *
  * Author:
  *   Behdad Esfahbod, 2005
  *
@@ -24,10 +18,10 @@
  * 
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library, in a file named COPYING; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA
+ * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301, USA
  *
- * For licensing issues, contact <license@farsiweb.info>.
+ * For licensing issues, contact <fribidi.license@gmail.com>.
  */
 #ifndef _FRIBIDI_FLAGS_H
 #define _FRIBIDI_FLAGS_H
@@ -38,7 +32,7 @@
 
 #include "fribidi-begindecls.h"
 
-typedef fribidi_uint32 FriBidiFlags;
+typedef uint32_t FriBidiFlags;
 
 /* 
  * Define option flags that various functions use. Each mask has
