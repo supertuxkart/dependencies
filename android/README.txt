@@ -2,6 +2,8 @@ This subdirectory contains packed sources of libraries that are used in STK and
 that are not included in the stk-code repository. They precisely are:
  - Curl
  - Freetype
+ - Fribidi
+ - Harfbuzz
  - Ifaddrs
  - Libogg
  - Libvorbis
