@@ -17,8 +17,8 @@
  * \brief Provides definitions for using VP8 or VP9 within the vpx Decoder
  *        interface.
  */
-#ifndef VPX_VP8DX_H_
-#define VPX_VP8DX_H_
+#ifndef VPX_VPX_VP8DX_H_
+#define VPX_VPX_VP8DX_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +116,32 @@ enum vp8_dec_control_id {
    */
   VP9_DECODE_SVC_SPATIAL_LAYER,
 
+  /*!\brief Codec control function to get last decoded frame quantizer.
+   *
+   * Return value uses internal quantizer scale defined by the codec.
+   *
+   * Supported in codecs: VP8, VP9
+   */
+  VPXD_GET_LAST_QUANTIZER,
+
+  /*!\brief Codec control function to set row level multi-threading.
+   *
+   * 0 : off, 1 : on
+   *
+   * Supported in codecs: VP9
+   */
+  VP9D_SET_ROW_MT,
+
+  /*!\brief Codec control function to set loopfilter optimization.
+   *
+   * 0 : off, Loop filter is done after all tiles have been decoded
+   * 1 : on, Loop filter is done immediately after decode without
+   *     waiting for all threads to sync.
+   *
+   * Supported in codecs: VP9
+   */
+  VP9D_SET_LOOP_FILTER_OPT,
+
   VP8_DECODER_CTRL_ID_MAX
 };
 
@@ -137,10 +163,6 @@ typedef struct vpx_decrypt_init {
   void *decrypt_state;
 } vpx_decrypt_init;
 
-/*!\brief A deprecated alias for vpx_decrypt_init.
- */
-typedef vpx_decrypt_init vp8_decrypt_init;
-
 /*!\cond */
 /*!\brief VP8 decoder control function parameter type
  *
@@ -155,6 +177,8 @@ VPX_CTRL_USE_TYPE(VP8D_GET_FRAME_CORRUPTED, int *)
 #define VPX_CTRL_VP8D_GET_FRAME_CORRUPTED
 VPX_CTRL_USE_TYPE(VP8D_GET_LAST_REF_USED, int *)
 #define VPX_CTRL_VP8D_GET_LAST_REF_USED
+VPX_CTRL_USE_TYPE(VPXD_GET_LAST_QUANTIZER, int *)
+#define VPX_CTRL_VPXD_GET_LAST_QUANTIZER
 VPX_CTRL_USE_TYPE(VPXD_SET_DECRYPTOR, vpx_decrypt_init *)
 #define VPX_CTRL_VPXD_SET_DECRYPTOR
 VPX_CTRL_USE_TYPE(VP8D_SET_DECRYPTOR, vpx_decrypt_init *)
@@ -169,6 +193,12 @@ VPX_CTRL_USE_TYPE(VP9_INVERT_TILE_DECODE_ORDER, int)
 #define VPX_CTRL_VP9_INVERT_TILE_DECODE_ORDER
 #define VPX_CTRL_VP9_DECODE_SVC_SPATIAL_LAYER
 VPX_CTRL_USE_TYPE(VP9_DECODE_SVC_SPATIAL_LAYER, int)
+#define VPX_CTRL_VP9_SET_SKIP_LOOP_FILTER
+VPX_CTRL_USE_TYPE(VP9_SET_SKIP_LOOP_FILTER, int)
+#define VPX_CTRL_VP9_DECODE_SET_ROW_MT
+VPX_CTRL_USE_TYPE(VP9D_SET_ROW_MT, int)
+#define VPX_CTRL_VP9_SET_LOOP_FILTER_OPT
+VPX_CTRL_USE_TYPE(VP9D_SET_LOOP_FILTER_OPT, int)
 
 /*!\endcond */
 /*! @} - end defgroup vp8_decoder */
@@ -177,4 +207,4 @@ VPX_CTRL_USE_TYPE(VP9_DECODE_SVC_SPATIAL_LAYER, int)
 }  // extern "C"
 #endif
 
-#endif  // VPX_VP8DX_H_
+#endif  // VPX_VPX_VP8DX_H_
