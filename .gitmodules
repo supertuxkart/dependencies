@@ -1,0 +1,42 @@
+[submodule "src/zlib"]
+	path = src/zlib
+	url = https://github.com/madler/zlib
+[submodule "src/mbedtls"]
+	path = src/mbedtls
+	url = https://github.com/ARMmbed/mbedtls
+[submodule "src/curl"]
+	path = src/curl
+	url = https://github.com/curl/curl
+[submodule "src/sqlite"]
+	path = src/sqlite
+	url = https://github.com/azadkuh/sqlite-amalgamation
+[submodule "src/libpng"]
+	path = src/libpng
+	url = https://github.com/glennrp/libpng
+[submodule "src/freetype"]
+	path = src/freetype
+	url = https://gitlab.freedesktop.org/freetype/freetype
+[submodule "src/harfbuzz"]
+	path = src/harfbuzz
+	url = https://github.com/harfbuzz/harfbuzz
+[submodule "src/libogg"]
+	path = src/libogg
+	url = https://github.com/xiph/ogg
+[submodule "src/libvorbis"]
+	path = src/libvorbis
+	url = https://github.com/xiph/vorbis
+[submodule "src/libjpeg"]
+	path = src/libjpeg
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo
+[submodule "src/libvpx"]
+	path = src/libvpx
+	url = https://github.com/webmproject/libvpx
+[submodule "src/sdl2"]
+	path = src/sdl2
+	url = https://github.com/Benau/SDL
+[submodule "src/openal"]
+	path = src/openal
+	url = https://github.com/kcat/openal-soft
+[submodule "src/libopenglrecorder"]
+	path = src/libopenglrecorder
+	url = https://github.com/Benau/libopenglrecorder
