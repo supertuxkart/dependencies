@@ -1,0 +1,452 @@
+name: win
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request: {}
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [i686, x86_64, aarch64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          submodules: true
+      - name: Configure packaging name for git master branch
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: |
+          echo "release_name=latest" >> $GITHUB_ENV
+      - name: Configure packaging name for tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo "release_name=`basename $GITHUB_REF`" >> $GITHUB_ENV
+      - name: Exit otherwise
+        if: ${{ !(github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) ||
+            github.repository_owner != 'supertuxkart' }}
+        run: exit 1
+      - name: Check for prerelease
+        if: ${{ github.ref == 'refs/heads/master' || contains(github.ref, 'rc') || contains(github.ref, 'beta') }}
+        run: |
+          echo "release_pre=true" >> $GITHUB_ENV
+      - name: Check for non-prerelease
+        if: ${{ github.ref != 'refs/heads/master' && !contains(github.ref, 'rc') && !contains(github.ref, 'beta') }}
+        run: |
+          echo "release_pre=false" >> $GITHUB_ENV
+      - name: Setting up llvm-dlltool arch for i686
+        if: ${{ matrix.arch == 'i686' }}
+        run: |
+          echo "dlltool_arch=i386" >> $GITHUB_ENV
+      - name: Setting up llvm-dlltool arch for x86_64
+        if: ${{ matrix.arch == 'x86_64' }}
+        run: |
+          echo "dlltool_arch=i386:x86-64" >> $GITHUB_ENV
+      - name: Setting up llvm-dlltool arch for aarch64
+        if: ${{ matrix.arch == 'aarch64' }}
+        run: |
+          echo "dlltool_arch=arm64" >> $GITHUB_ENV
+      - name: Get LLVM MinGW
+        run: |
+          sudo cp build_tools/dll2lib.sh /usr/local/bin
+          wget https://github.com/mstorsjo/llvm-mingw/releases/download/20210423/llvm-mingw-20210423-msvcrt-ubuntu-18.04-x86_64.tar.xz -P $HOME
+          cd $HOME
+          tar xf llvm-mingw-20210423-msvcrt-ubuntu-18.04-x86_64.tar.xz
+          mv llvm-mingw-20210423-msvcrt-ubuntu-18.04-x86_64 llvm-mingw
+      - name: Set up MinGW for x86 or x64
+        if: ${{ matrix.arch == 'i686' || matrix.arch == 'x86_64' }}
+        run: |
+          sudo pip3 install gdown
+          cd /
+          sudo mkdir -p /data/mxe/usr
+          cd /data/mxe/usr
+          # Original source is located in supertuxkart.official gmail
+          # It's compiled from https://github.com/mxe/mxe
+          sudo gdown https://drive.google.com/uc?id=1KK1RH3W8Df87oypadSLPQIGWQG5MQwRn
+          sudo unzip mxe_static_mingw.zip
+          sudo rm mxe_static_mingw.zip
+      - name: Build zlib
+        run: |
+          cd src/zlib
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }}
+          make -j4
+          make install
+          dll2lib.sh ${{ env.dlltool_arch }} libzlib.dll
+          cp libzlib.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libzlib.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build Mbed TLS
+        run: |
+          cd src/mbedtls
+          # Fix C99 error
+          sed -i 's/set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")//g' CMakeLists.txt
+          # Windows XP compatibility
+          sed -i 's/if defined(_TRUNCATE)/if 0/g' library/platform.c
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF \
+          -DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=OFF
+          make -j4
+          make install
+          cd library
+          dll2lib.sh ${{ env.dlltool_arch }} libmbedcrypto.dll
+          dll2lib.sh ${{ env.dlltool_arch }} libmbedx509.dll
+          dll2lib.sh ${{ env.dlltool_arch }} libmbedtls.dll
+          cp *.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp *.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+          # Move .dll to bin so cmake will find .lib first
+          mv $HOME/dependencies-win-${{ matrix.arch }}/lib/libmbed*.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
+      - name: Build cURL
+        run: |
+          cd src/curl
+          mkdir build
+          cd build
+          # -DENABLE_INET_PTON fpr Windows XP
+          # -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none because STK includes its own
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DBUILD_TESTING=OFF -DBUILD_CURL_EXE=OFF \
+          -DCURL_STATIC_CRT=ON -DENABLE_INET_PTON=OFF \
+          -DCMAKE_USE_MBEDTLS=ON -DUSE_ZLIB=ON \
+          -DCMAKE_USE_OPENSSL=OFF -DCMAKE_USE_LIBSSH=OFF -DCMAKE_USE_LIBSSH2=OFF \
+          -DCMAKE_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
+          -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none
+          make -j4
+          make install
+          cd lib
+          dll2lib.sh ${{ env.dlltool_arch }} libcurl.dll
+          cp libcurl.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libcurl.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/bin/curl-config
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build SQLite
+        run: |
+          cd src/sqlite
+          sed -i 's/${PROJECT_NAME} STATIC/${PROJECT_NAME} SHARED/g' CMakeLists.txt
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }}
+          make
+          dll2lib.sh ${{ env.dlltool_arch }} libsqlite3.dll
+          cp ../sqlite3ext.h ../sqlite3.h $HOME/dependencies-win-${{ matrix.arch }}/include
+          cp libsqlite3.dll libsqlite3.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libsqlite3.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+      - name: Build libpng
+        run: |
+          cd src/libpng
+          mkdir build
+          cd build
+          # -DPNG_INTEL_SSE=off for non-sse2 capable CPUs (at the moment it only get enabled
+          # in x86_64 only)
+          # -DPNG_ARM_NEON=off is required for successful compilation of aarch64
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DPNG_STATIC=OFF -DPNG_TESTS=OFF -DPNG_ARM_NEON=off
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} libpng16.dll
+          make install
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/libpng*
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/bin/*png*
+          cp libpng16.dll libpng16.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libpng16.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+      - name: Build FreeType bootstrap
+        run: |
+          cd src/freetype
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
+          -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=OFF -DBUILD_SHARED_LIBS=ON
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} libfreetype.dll
+          make install
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
+          cp libfreetype.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libfreetype.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build HarfBuzz
+        run: |
+          cd src/harfbuzz
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DHB_HAVE_CORETEXT=OFF -DHB_HAVE_FREETYPE=ON -DBUILD_SHARED_LIBS=ON \
+          -DHB_BUILD_SUBSET=OFF
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} libharfbuzz.dll
+          make install
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
+          cp libharfbuzz.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libharfbuzz.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build FreeType
+        run: |
+          cd src/freetype
+          git reset --hard
+          rm -rf build
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
+          -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=ON  -DBUILD_SHARED_LIBS=ON
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} libfreetype.dll
+          make install
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
+          cp libfreetype.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libfreetype.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build Ogg
+        run: |
+          cd src/libogg
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF -DINSTALL_DOCS=OFF \
+          -DINSTALL_PKG_CONFIG_MODULE=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} libogg.dll
+          make install
+          cp libogg.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libogg.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build Vorbis
+        run: |
+          cd src/libvorbis
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DBUILD_SHARED_LIBS=ON -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          make -j4
+          cd lib
+          dll2lib.sh ${{ env.dlltool_arch }} libvorbis.dll
+          dll2lib.sh ${{ env.dlltool_arch }} libvorbisenc.dll
+          dll2lib.sh ${{ env.dlltool_arch }} libvorbisfile.dll
+          cp libvorbis*.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libvorbis*.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          cd ..
+          make install
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+      - name: Build libjpeg-turbo
+        run: |
+          sudo apt install -y yasm
+          cd src/libjpeg
+          mkdir build
+          cd build
+          # libjpeg install library to lib64 folder, override it
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DENABLE_SHARED=ON -DENABLE_STATIC=OFF -DCMAKE_INSTALL_DEFAULT_LIBDIR=lib
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} libjpeg-62.dll
+          # CMake detects only libjpeg.lib
+          mv libjpeg-62.lib libjpeg.lib
+          dll2lib.sh ${{ env.dlltool_arch }} libturbojpeg.dll
+          make install
+          cp libturbojpeg.pdb libjpeg-62.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libturbojpeg.lib libjpeg.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/bin/*.exe
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+      - name: Build libvpx
+        run: |
+          # We use clang only for aarch64 because staticially linking winpthread
+          # leads to GetTickCount64 which only available in > vista
+          cd src/libvpx
+          patch -p1 <../../patches/libvpx-win-configure.patch
+          # Fix for clang
+          sed -i 's/-Wl,-no-undefined//g' build/make/configure.sh
+          mkdir build-vpx
+          cd build-vpx
+          unset EXTRA_CFLAGS
+          if [ ${{ matrix.arch }} = "i686" ]; then
+            _targetarch="x86-win32-gcc"
+            # Required for 32bit build, otherwise crash when using
+            EXTRA_CFLAGS="-mstackrealign"
+            #EXTRA_CFLAGS="-mstackrealign -gcodeview"
+            _runtimecpu="--enable-runtime-cpu-detect"
+            _compiler=/data/mxe/usr/bin/${{ matrix.arch }}-w64-mingw32.static.posix.dw2-
+          elif [ ${{ matrix.arch }} = "aarch64" ]; then
+            _targetarch="arm64-win64-gcc"
+            EXTRA_CFLAGS="-gcodeview"
+            # Arm doesn't support runtime cpu detection
+            _runtimecpu="--disable-runtime-cpu-detect"
+            _compiler=$HOME/llvm-mingw/bin/${{ matrix.arch }}-w64-mingw32-
+          else
+            _targetarch="x86_64-win64-gcc"
+            #EXTRA_CFLAGS="-gcodeview"
+            _runtimecpu="--enable-runtime-cpu-detect"
+            _compiler=/data/mxe/usr/bin/${{ matrix.arch }}-w64-mingw32.static.posix.seh-
+          fi
+          LDFLAGS="-static" \
+          CFLAGS="$EXTRA_CFLAGS -fno-asynchronous-unwind-tables" \
+          CROSS=${_compiler} ../configure \
+          --prefix=$HOME/dependencies-win-${{ matrix.arch }} \
+          --target=${_targetarch} \
+          --disable-docs \
+          --disable-install-docs \
+          --disable-install-srcs \
+          --enable-pic \
+          --enable-postproc \
+          ${_runtimecpu} \
+          --enable-shared \
+          --enable-vp8 \
+          --enable-vp9 \
+          --enable-vp9-highbitdepth \
+          --enable-vp9-temporal-denoising
+          if [ ${{ matrix.arch }} = "aarch64" ]; then
+            sed -i 's/-Wl,--no-undefined/-Wl,-undefined,error/g' Makefile
+            sed -i 's/-Wl,-soname,$$(SONAME)//g' Makefile
+            sed -i 's/-Wl,--version-script,$$(EXPORTS_FILE) /-Wl,-pdb=libvpx.pdb /g' Makefile
+          fi
+          make -j4
+          make install
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/libvpx*
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/bin/vpx*
+          cp libvpx.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
+          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
+            strip $HOME/dependencies-win-${{ matrix.arch }}/bin/libvpx.dll
+          fi
+          # 2>/dev/null || : to ignore missing .pdb if not aarch64
+          cp libvpx.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
+          VPXDEF=$(awk '!/:/' libvpx.ver | sed 's/;//g')
+          echo "EXPORTS" > libvpx.def
+          printf "${VPXDEF}" >> libvpx.def
+          $HOME/llvm-mingw/bin/llvm-dlltool -m ${{ env.dlltool_arch }} -d libvpx.def -D libvpx.dll -l libvpx.lib
+          cp libvpx.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+      - name: Build SDL2
+        run: |
+          cd src/sdl2
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DBUILD_SHARED_LIBS=ON
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} SDL2.dll
+          make install
+          cp SDL2.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp SDL2.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/cmake
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build OpenAL
+        run: |
+          cd src/openal
+          cd build
+          if [ ${{ matrix.arch }} = "i686" ]; then
+            # OpenAL fails to compile with only -DALSOFT_ENABLE_SSE2_CODEGEN
+            # Need to disable all SSE completely
+            cmake .. -DMXE_PREFIX=/data/mxe/usr \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
+            -DALSOFT_CPUEXT_SSE=OFF -DALSOFT_CPUEXT_SSE2=OFF -DALSOFT_CPUEXT_SSE3=OFF \
+            -DALSOFT_CPUEXT_SSE4_1=OFF -DALSOFT_ENABLE_SSE_CODEGEN=OFF \
+            -DALSOFT_ENABLE_SSE2_CODEGEN=OFF
+          elif [ ${{ matrix.arch }} = "aarch64" ]; then
+            cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON
+          else
+            cmake .. -DMXE_PREFIX=/data/mxe/usr \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON
+          fi
+          make -j4
+          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
+            # Without stripping it's 2xMB when using GNU Mingw
+            strip OpenAL32.dll
+          fi
+          dll2lib.sh ${{ env.dlltool_arch }} OpenAL32.dll
+          make install
+          cp OpenAL32.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
+          cp OpenAL32.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+      - name: Build libopenglrecorder
+        run: |
+          cd src/libopenglrecorder
+          mkdir dependencies-mingw
+          cd dependencies-mingw
+          cp -r $HOME/dependencies-win-${{ matrix.arch }}/* .
+          cd ..
+          if [ ${{ matrix.arch }} = "x86_64" ] || [ ${{ matrix.arch }} = "aarch64" ]; then
+            mv dependencies-mingw dependencies-mingw-64bit
+          fi
+          mkdir build
+          cd build
+          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
+            _toolchain_file=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake
+          else
+            _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
+          fi
+          cmake .. -DMXE_PREFIX=/data/mxe/usr \
+          -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=${_toolchain_file} \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }}
+          make -j4
+          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
+            strip libopenglrecorder.dll
+          fi
+          # Use dll2lib.sh will export Unwind symbols which will conflict libc++.a
+          $HOME/llvm-mingw/bin/llvm-dlltool -m ${{ env.dlltool_arch }} -d ../openglrecorder.def -D libopenglrecorder.dll -l libopenglrecorder.lib
+          cp libopenglrecorder.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libopenglrecorder.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
+          cp libopenglrecorder.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          cp ../openglrecorder.h $HOME/dependencies-win-${{ matrix.arch }}/include
+      - name: Archive
+        run: |
+          FOLDER=$(pwd)
+          cd
+          rm -rf dependencies-win-${{ matrix.arch }}/share
+          zip -r $FOLDER/dependencies-win-${{ matrix.arch }}.zip dependencies-win-${{ matrix.arch }}
+      - name: Upload windows deps
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: "dependencies*.zip"
+          tag: ${{ env.release_name }}
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          allowUpdates: true
+          prerelease: ${{ env.release_pre }}
