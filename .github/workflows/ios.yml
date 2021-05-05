@@ -1,0 +1,249 @@
+name: ios
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request: {}
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    strategy:
+      fail-fast: true
+      matrix:
+        sysroot: [iphoneos, iphonesimulator]
+        # Reversed for arm64e
+        arch: [arm64, x86_64]
+        exclude:
+          - sysroot: iphoneos
+            arch: x86_64
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          submodules: true
+      - name: Build zlib
+        run: |
+          cd src/zlib
+          # zlib cmake will change the public header, install it first
+          mkdir -p $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+          mkdir -p $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
+          cp zconf.h zlib.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}
+          make -j5
+          cp libz.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
+      - name: Build Mbed TLS
+        run: |
+          cd src/mbedtls
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF \
+          -DUSE_SHARED_MBEDTLS_LIBRARY=OFF -DUSE_STATIC_MBEDTLS_LIBRARY=ON
+          make -j5
+          make install
+      - name: Build cURL
+        run: |
+          cd src/curl
+          mkdir build
+          cd build
+          # -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none because STK includes its own
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DBUILD_TESTING=OFF -DBUILD_CURL_EXE=OFF  -DBUILD_SHARED_LIBS=OFF \
+          -DCURL_STATIC_CRT=ON -DCMAKE_USE_MBEDTLS=ON -DUSE_ZLIB=ON \
+          -DCMAKE_USE_OPENSSL=OFF -DCMAKE_USE_LIBSSH=OFF -DCMAKE_USE_LIBSSH2=OFF \
+          -DCMAKE_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
+          -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none
+          make -j5
+          make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/bin
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+      - name: Build libpng
+        run: |
+          cd src/libpng
+          mkdir build
+          cd build
+          # -DPNG_ARM_NEON=off is required for successful compilation of aarch64
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DPNG_SHARED=OFF -DPNG_STATIC=ON -DPNG_TESTS=OFF -DPNG_ARM_NEON=off
+          make -j5
+          make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/bin
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/libpng
+          rm -f $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/libpng.a
+      - name: Build FreeType bootstrap
+        run: |
+          cd src/freetype
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
+          -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=OFF -DBUILD_SHARED_LIBS=OFF \
+          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE
+          make -j5
+          make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+      - name: Build HarfBuzz
+        run: |
+          cd src/harfbuzz
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DHB_HAVE_CORETEXT=OFF -DHB_HAVE_FREETYPE=ON -DBUILD_SHARED_LIBS=OFF \
+          -DHB_BUILD_SUBSET=OFF
+          make -j5
+          make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
+      - name: Build FreeType
+        run: |
+          cd src/freetype
+          git reset --hard
+          rm -rf build
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
+          -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=ON  -DBUILD_SHARED_LIBS=OFF \
+          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE
+          make -j5
+          make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+      - name: Build Ogg
+        run: |
+          cd src/libogg
+          sed -i '' "s/include <sys\/types.h>/include <stdint.h>/g" include/ogg/os_types.h
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF -DINSTALL_DOCS=OFF \
+          -DINSTALL_PKG_CONFIG_MODULE=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          make -j5
+          make install
+      - name: Build Vorbis
+        run: |
+          cd src/libvorbis
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DBUILD_SHARED_LIBS=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          make -j5
+          make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+      - name: Build libjpeg-turbo
+        run: |
+          # Currently it fails to build with nasm or yasm and fails to link test executables for some arch
+          # As jpeg is not performance crticial for STK enough it's built with asm disabled
+          cd src/libjpeg
+          sed -i '' '/install(TARGETS rdjpgcom wrjpgcom/d' CMakeLists.txt
+          mkdir build
+          cd build
+          # libjpeg install library to lib64 folder, override it
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DCMAKE_INSTALL_DEFAULT_LIBDIR=lib
+          make -j5 jpeg-static turbojpeg-static
+          # CMake fails to install, maually do that
+          cp libjpeg.a libturbojpeg.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
+          cp jconfig.h ../jerror.h ../jmorecfg.h ../jpeglib.h ../turbojpeg.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+      - name: Build SDL2
+        # Only need to run for 1 arch as SDL2 project includes universal arch support
+        if: ${{ matrix.arch == 'arm64' }}
+        run: |
+          cd src/sdl2/Xcode/SDL
+          xcodebuild -project SDL.xcodeproj -target "Static Library-iOS" -configuration Release -sdk ${{ matrix.sysroot }} CONFIGURATION_BUILD_DIR=./build
+          cp build/libSDL2.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
+          cd ../..
+          # Manually install the header for universal arch
+          cp -r include $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/SDL2
+      - name: Prepare upload
+        run: |
+          mv $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} .
+          rm -rf dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/share
+      - name: Upload dependencies
+        uses: actions/upload-artifact@v2
+        with:
+          name: dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}
+          path: dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/*
+
+  packaging:
+    name: Packaging dependencies
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - name: Configure packaging name for git master branch
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: |
+          echo "release_name=preview" >> $GITHUB_ENV
+      - name: Configure packaging name for tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo "release_name=`basename $GITHUB_REF`" >> $GITHUB_ENV
+      - name: Exit otherwise
+        if: ${{ !(github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) ||
+            github.repository_owner != 'supertuxkart' }}
+        run: exit 1
+      - name: Check for prerelease
+        if: ${{ github.ref == 'refs/heads/master' || contains(github.ref, 'rc') || contains(github.ref, 'beta') }}
+        run: |
+          echo "release_pre=true" >> $GITHUB_ENV
+      - name: Check for non-prerelease
+        if: ${{ github.ref != 'refs/heads/master' && !contains(github.ref, 'rc') && !contains(github.ref, 'beta') }}
+        run: |
+          echo "release_pre=false" >> $GITHUB_ENV
+      - name: Download dependencies
+        uses: actions/download-artifact@v2
+      - name: Archive
+        run: |
+          mkdir -p dependencies-iphonesimulator/lib
+          cd dependencies-iphonesimulator/lib
+          for f in ../../dependencies-iphonesimulator-x86_64/lib/*.a; do
+            file=$(basename $f)
+            lipo -create ../../dependencies-iphonesimulator-x86_64/lib/$file ../../dependencies-iphonesimulator-arm64/lib/$file -output $file
+          done
+          # libSDL2.a is already a fat archive
+          cp ../../dependencies-iphonesimulator-arm64/lib/libSDL2.a .
+          cp -r ../../dependencies-iphonesimulator-x86_64/include ..
+          cd ../..
+          # Only single arch for iphoneos
+          mv dependencies-iphoneos-arm64 dependencies-iphoneos
+          tar -cJf dependencies-iphoneos.tar.xz dependencies-iphoneos
+          tar -cJf dependencies-iphonesimulator.tar.xz dependencies-iphonesimulator
+      - name: Upload iOS deps
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: "dependencies*.xz"
+          tag: ${{ env.release_name }}
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          allowUpdates: true
+          prerelease: ${{ env.release_pre }}

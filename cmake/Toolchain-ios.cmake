@@ -1,0 +1,63 @@
+# Get SDK path
+execute_process(COMMAND xcodebuild -version -sdk iphoneos Path
+    OUTPUT_VARIABLE CMAKE_OSX_SYSROOT_IOS
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND xcodebuild -version -sdk iphonesimulator Path
+    OUTPUT_VARIABLE CMAKE_OSX_SYSROOT_SIMULATOR
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND xcodebuild -sdk ${CMAKE_OSX_SYSROOT} -version SDKVersion
+    OUTPUT_VARIABLE SDK_VERSION
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (NOT DEFINED CMAKE_OSX_SYSROOT_IOS OR NOT DEFINED CMAKE_OSX_SYSROOT_SIMULATOR OR NOT DEFINED SDK_VERSION)
+    message(FATAL_ERROR "Cannot find iphoneos or iphonesimulator sdk location and their version info.")
+else()
+    message(STATUS "Using SDK path: ${CMAKE_OSX_SYSROOT_IOS}.")
+endif()
+set(CMAKE_OSX_SYSROOT ${IOS_SYSROOT} CACHE INTERNAL "")
+
+# Standard config
+set(CMAKE_SYSTEM_VERSION ${SDK_VERSION} CACHE INTERNAL "")
+set(UNIX TRUE CACHE BOOL "")
+set(APPLE TRUE CACHE BOOL "")
+set(IOS TRUE CACHE BOOL "")
+set(CMAKE_AR ar CACHE FILEPATH "" FORCE)
+set(CMAKE_RANLIB ranlib CACHE FILEPATH "" FORCE)
+set(CMAKE_STRIP strip CACHE FILEPATH "" FORCE)
+
+# Set the architectures for which to buildar
+set(CMAKE_OSX_ARCHITECTURES ${IOS_ARCH} CACHE STRING "Build architecture for iOS")
+set(CMAKE_C_SIZEOF_DATA_PTR 8)
+set(CMAKE_CXX_SIZEOF_DATA_PTR 8)
+set(CMAKE_SYSTEM_PROCESSOR ${IOS_ARCH})
+set(CMAKE_SYSTEM_NAME iOS CACHE INTERNAL "" FORCE)
+
+# Change the type of target generated for try_compile() so it'll work when cross-compiling
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+# All iOS/Darwin specific settings - some may be redundant.
+set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
+set(CMAKE_SHARED_LIBRARY_SUFFIX ".dylib")
+set(CMAKE_SHARED_MODULE_PREFIX "lib")
+set(CMAKE_SHARED_MODULE_SUFFIX ".so")
+set(CMAKE_C_COMPILER_ABI ELF)
+set(CMAKE_CXX_COMPILER_ABI ELF)
+set(CMAKE_C_HAS_ISYSROOT 1)
+set(CMAKE_CXX_HAS_ISYSROOT 1)
+set(CMAKE_MODULE_EXISTS 1)
+set(CMAKE_DL_LIBS "")
+set(CMAKE_C_OSX_COMPATIBILITY_VERSION_FLAG "-compatibility_version ")
+set(CMAKE_C_OSX_CURRENT_VERSION_FLAG "-current_version ")
+set(CMAKE_CXX_OSX_COMPATIBILITY_VERSION_FLAG "${CMAKE_C_OSX_COMPATIBILITY_VERSION_FLAG}")
+set(CMAKE_CXX_OSX_CURRENT_VERSION_FLAG "${CMAKE_C_OSX_CURRENT_VERSION_FLAG}")
+
+# For archive
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
+
+set(SDK_NAME_VERSION_FLAGS "-miphoneos-version-min=8.0")
+set(CMAKE_OSX_DEPLOYMENT_TARGET 8.0 CACHE STRING "Set CMake deployment target" FORCE)
+
+SET(CMAKE_FIND_ROOT_PATH ${CMAKE_INSTALL_PREFIX})
