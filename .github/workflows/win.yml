@@ -70,6 +70,16 @@ jobs:
           sudo wget https://github.com/supertuxkart/dependencies/releases/download/preview/mxe_static_mingw.zip
           sudo unzip mxe_static_mingw.zip
           sudo rm mxe_static_mingw.zip
+      - name: Restore timestamps
+        run: |
+          cd src
+          for dir in *
+          do
+            cd $dir
+            last_time=$(git log --date=local --pretty=format:"%cd" . | head -1)
+            find . -exec touch -d "$last_time" {} +
+            cd ..
+          done
       - name: Build zlib
         run: |
           cd src/zlib
@@ -77,7 +87,7 @@ jobs:
           mkdir -p $HOME/dependencies-win-${{ matrix.arch }}/bin
           mkdir -p $HOME/dependencies-win-${{ matrix.arch }}/include
           mkdir -p $HOME/dependencies-win-${{ matrix.arch }}/lib
-          cp zconf.h zlib.h $HOME/dependencies-win-${{ matrix.arch }}/include
+          cp -p zconf.h zlib.h $HOME/dependencies-win-${{ matrix.arch }}/include
           mkdir build
           cd build
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
@@ -150,7 +160,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }}
           make
           dll2lib.sh ${{ env.dlltool_arch }} libsqlite3.dll
-          cp ../sqlite3ext.h ../sqlite3.h $HOME/dependencies-win-${{ matrix.arch }}/include
+          cp -p ../sqlite3ext.h ../sqlite3.h $HOME/dependencies-win-${{ matrix.arch }}/include
           cp libsqlite3.dll libsqlite3.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libsqlite3.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
       - name: Build libpng
@@ -173,6 +183,8 @@ jobs:
           rm -rf $HOME/dependencies-win-${{ matrix.arch }}/bin/*png*
           cp libpng16.dll libpng16.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libpng16.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          touch -r ../README $HOME/dependencies-win-${{ matrix.arch }}/include/png*
+          touch -r ../README $HOME/dependencies-win-${{ matrix.arch }}/include/libpng16/*
       - name: Build FreeType bootstrap
         run: |
           cd src/freetype
@@ -190,6 +202,7 @@ jobs:
           cp libfreetype.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libfreetype.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+          touch -r ../README $HOME/dependencies-win-${{ matrix.arch }}/include/freetype2/freetype/config/*
       - name: Build HarfBuzz
         run: |
           cd src/harfbuzz
@@ -220,12 +233,10 @@ jobs:
           -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
           -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=ON  -DBUILD_SHARED_LIBS=ON
           make -j4
+          # Don't make install again as the timestamp will be overwritten after git reset --hard
           dll2lib.sh ${{ env.dlltool_arch }} libfreetype.dll
-          make install
-          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
-          cp libfreetype.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libfreetype.dll libfreetype.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libfreetype.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
-          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
       - name: Build Ogg
         run: |
           cd src/libogg
@@ -242,6 +253,7 @@ jobs:
           cp libogg.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libogg.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
+          touch -r ../README.md $HOME/dependencies-win-${{ matrix.arch }}/include/ogg/*
       - name: Build Vorbis
         run: |
           cd src/libvorbis
@@ -285,6 +297,7 @@ jobs:
           rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
           rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
           rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+          touch -r ../README.md $HOME/dependencies-win-${{ matrix.arch }}/include/jconfig.h
       - name: Build libvpx
         run: |
           # We use clang only for aarch64 because staticially linking winpthread
@@ -365,7 +378,7 @@ jobs:
           make -j4
           dll2lib.sh ${{ env.dlltool_arch }} SDL2.dll
           # Manually install the header for msvc usage
-          cp -r ../include $HOME/dependencies-win-${{ matrix.arch }}/include/SDL2
+          cp -rp ../include $HOME/dependencies-win-${{ matrix.arch }}/include/SDL2
           cp SDL2.dll SDL2.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp SDL2.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           rm -rf $HOME/dependencies-win-${{ matrix.arch }}/cmake
@@ -437,7 +450,7 @@ jobs:
           cp libopenglrecorder.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libopenglrecorder.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
           cp libopenglrecorder.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
-          cp ../openglrecorder.h $HOME/dependencies-win-${{ matrix.arch }}/include
+          cp -p ../openglrecorder.h $HOME/dependencies-win-${{ matrix.arch }}/include
       - name: Archive
         run: |
           FOLDER=$(pwd)

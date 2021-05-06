@@ -26,13 +26,23 @@ jobs:
         with:
           fetch-depth: 1
           submodules: true
+      - name: Restore timestamps
+        run: |
+          cd src
+          for dir in *
+          do
+            cd $dir
+            timestamp=$(git log --date=local --pretty=format:"%cd" --date=format:'%Y%m%d%H%M.%S' . | head -1)
+            find . -exec touch -t $timestamp {} +
+            cd ..
+          done
       - name: Build zlib
         run: |
           cd src/zlib
           # zlib cmake will change the public header, install it first
           mkdir -p $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
           mkdir -p $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
-          cp zconf.h zlib.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+          cp -p zconf.h zlib.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
           mkdir build
           cd build
           cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
@@ -87,6 +97,8 @@ jobs:
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/libpng
           rm -f $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/libpng.a
+          touch -r ../README $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/png*
+          touch -r ../README $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/libpng16/*
       - name: Build FreeType bootstrap
         run: |
           cd src/freetype
@@ -102,6 +114,7 @@ jobs:
           make install
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+          touch -r ../README $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/freetype2/freetype/config/*
       - name: Build HarfBuzz
         run: |
           cd src/harfbuzz
@@ -129,9 +142,8 @@ jobs:
           -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=ON  -DBUILD_SHARED_LIBS=OFF \
           -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE
           make -j5
-          make install
-          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
-          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+          # Don't make install again as the timestamp will be overwritten after git reset --hard
+          cp libfreetype.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
       - name: Build Ogg
         run: |
           cd src/libogg
@@ -145,6 +157,7 @@ jobs:
           -DINSTALL_PKG_CONFIG_MODULE=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
           make -j5
           make install
+          touch -r ../README.md $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/ogg/*
       - name: Build Vorbis
         run: |
           cd src/libvorbis
@@ -173,7 +186,9 @@ jobs:
           make -j5 jpeg-static turbojpeg-static
           # CMake fails to install, maually do that
           cp libjpeg.a libturbojpeg.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
-          cp jconfig.h ../jerror.h ../jmorecfg.h ../jpeglib.h ../turbojpeg.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+          cp -p ../jerror.h ../jmorecfg.h ../jpeglib.h ../turbojpeg.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+          touch -r ../jpeglib.h jconfig.h
+          cp -p jconfig.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
       - name: Build SDL2
         # Only need to run for 1 arch as SDL2 project includes universal arch support
         if: ${{ matrix.arch == 'arm64' }}
@@ -183,16 +198,18 @@ jobs:
           cp build/libSDL2.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
           cd ../..
           # Manually install the header for universal arch
-          cp -r include $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/SDL2
+          cp -rp include $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/SDL2
       - name: Prepare upload
         run: |
           mv $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} .
           rm -rf dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/share
+          mkdir build
+          tar -cJf build/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}.tar.xz dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}
       - name: Upload dependencies
         uses: actions/upload-artifact@v2
         with:
-          name: dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}
-          path: dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/*
+          name: build
+          path: build/*
 
   packaging:
     name: Packaging dependencies
@@ -223,6 +240,9 @@ jobs:
         uses: actions/download-artifact@v2
       - name: Archive
         run: |
+          tar xf build/dependencies-iphoneos-arm64.tar.xz
+          tar xf build/dependencies-iphonesimulator-x86_64.tar.xz
+          tar xf build/dependencies-iphonesimulator-arm64.tar.xz
           mkdir -p dependencies-iphonesimulator/lib
           cd dependencies-iphonesimulator/lib
           for f in ../../dependencies-iphonesimulator-x86_64/lib/*.a; do
@@ -231,7 +251,7 @@ jobs:
           done
           # libSDL2.a is already a fat archive
           cp ../../dependencies-iphonesimulator-arm64/lib/libSDL2.a .
-          cp -r ../../dependencies-iphonesimulator-x86_64/include ..
+          cp -rp ../../dependencies-iphonesimulator-arm64/include ..
           cd ../..
           # Only single arch for iphoneos
           mv dependencies-iphoneos-arm64 dependencies-iphoneos
