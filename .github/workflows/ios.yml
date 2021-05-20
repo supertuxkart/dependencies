@@ -189,6 +189,19 @@ jobs:
           cp -p ../jerror.h ../jmorecfg.h ../jpeglib.h ../turbojpeg.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
           touch -r ../jpeglib.h jconfig.h
           cp -p jconfig.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+      - name: Build libsamplerate
+        run: |
+          cd src/libsamplerate
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DLIBSAMPLERATE_EXAMPLES=OFF -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF
+          make -j5
+          make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
       - name: Build SDL2
         # Only need to run for 1 arch as SDL2 project includes universal arch support
         if: ${{ matrix.arch == 'arm64' }}

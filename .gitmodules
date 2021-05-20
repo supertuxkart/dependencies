@@ -40,3 +40,6 @@
 [submodule "src/libopenglrecorder"]
 	path = src/libopenglrecorder
 	url = https://github.com/Benau/libopenglrecorder
+[submodule "src/libsamplerate"]
+	path = src/libsamplerate
+	url = https://github.com/libsndfile/libsamplerate
