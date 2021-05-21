@@ -89,12 +89,20 @@ jobs:
           -DUSE_SHARED_MBEDTLS_LIBRARY=${{ env.shared }} -DUSE_STATIC_MBEDTLS_LIBRARY=${{ env.static }}
           make -j5
           make install
+          # Fix dylib permission
+          chmod 755 $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/libmbed*dylib || true
       - name: Build cURL
         run: |
           # Disable bundled zlib
           cd src/curl
           mkdir build
           cd build
+          # Fix old Mac without HAVE_CLOCK_GETTIME_MONOTONIC
+          if [ ${{ matrix.platform }} = "MacOSX" ] && [ ${{ matrix.arch }} = "x86_64" ]; then
+            wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz
+            tar xf MacOSX10.9.sdk.tar.xz
+            extra_flags="-isysroot $(pwd)/MacOSX10.9.sdk"
+          fi
           # -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none because STK includes its own
           cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} -DCCTOOLS_ARCH=${{ matrix.arch }} \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
@@ -103,7 +111,8 @@ jobs:
           -DCMAKE_USE_MBEDTLS=ON -DUSE_ZLIB=ON \
           -DCMAKE_USE_OPENSSL=OFF -DCMAKE_USE_LIBSSH=OFF -DCMAKE_USE_LIBSSH2=OFF \
           -DCMAKE_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
-          -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none
+          -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none \
+          -DCMAKE_C_FLAGS="$extra_flags" -DCMAKE_CXX_FLAGS="$extra_flags"
           make -j5
           make install
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
