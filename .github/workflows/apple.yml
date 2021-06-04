@@ -37,7 +37,8 @@ jobs:
           do
             cd $dir
             timestamp=$(git log --date=local --pretty=format:"%cd" --date=format:'%Y%m%d%H%M.%S' . | head -1)
-            find . -exec touch -t $timestamp {} +
+            # Ignore errors from MoltenVK submodules
+            find . -exec touch -t $timestamp {} + || true
             cd ..
           done
       - id: sysroot
@@ -247,10 +248,11 @@ jobs:
           rm -rf dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/share
           mkdir build
           tar -cJf build/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}.tar.xz dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}
-      - name: Copy SDL2
+      - name: Copy SDL2 and MoltenVK
         if: ${{ matrix.platform == 'iPhoneSimulator' && matrix.arch == 'arm64' }}
         run: |
           tar -cJf build/sdl.tar.xz src/sdl2
+          tar -cJf build/moltenvk.tar.xz src/moltenvk
       - name: Upload dependencies
         uses: actions/upload-artifact@v2
         with:
@@ -318,6 +320,24 @@ jobs:
           # Only single arch for iphoneos and appletvos
           #mv dependencies-iphoneos-arm64 dependencies-iphoneos
           #mv dependencies-appletvos-arm64 dependencies-appletvos
+      - name: Build MoltenVK
+        run: |
+          tar xf build/moltenvk.tar.xz
+          cd src/moltenvk
+          ./fetchDependencies --macos --iossim --tvossim
+          sed -i '' "s/10.11/10.9/g" MoltenVK/MoltenVK.xcodeproj/project.pbxproj
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (macOS only)" -configuration "Release"
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -destination "generic/platform=iOS Simulator" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
+          xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -destination "generic/platform=tvOS Simulator" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
+          touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
+          touch -r README.md Package/Release/MoltenVK/include/vk_video/*
+          touch -r README.md Package/Release/MoltenVK/include/vulkan/*
+          cp -rp Package/Release/MoltenVK/include/* ../../dependencies-macosx/include
+          cp Package/Release/MoltenVK/MoltenVK.xcframework/macos-arm64_x86_64/libMoltenVK.a ../../dependencies-macosx/lib
+          cp -rp Package/Release/MoltenVK/include/* ../../dependencies-iphonesimulator/include
+          cp Package/Release/MoltenVK/MoltenVK.xcframework/ios-arm64_x86_64-simulator/libMoltenVK.a ../../dependencies-iphonesimulator/lib
+          cp -rp Package/Release/MoltenVK/include/* ../../dependencies-appletvsimulator/include
+          cp Package/Release/MoltenVK/MoltenVK.xcframework/tvos-arm64_x86_64-simulator/libMoltenVK.a ../../dependencies-appletvsimulator/lib
       - name: Build SDL2
         run: |
           tar xf build/sdl.tar.xz

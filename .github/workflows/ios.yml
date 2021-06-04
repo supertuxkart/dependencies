@@ -55,7 +55,8 @@ jobs:
           do
             cd $dir
             timestamp=$(git log --date=local --pretty=format:"%cd" --date=format:'%Y%m%d%H%M.%S' . | head -1)
-            find . -exec touch -t $timestamp {} +
+            # Ignore errors from MoltenVK submodules
+            find . -exec touch -t $timestamp {} + || true
             cd ..
           done
       - name: Build zlib
@@ -234,9 +235,32 @@ jobs:
           cd ../..
           # Manually install the header for universal arch
           cp -rp include $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include/SDL2
+      - name: Build MoltenVK for iOS
+        if: ${{ matrix.sysroot == 'iphoneos' }}
+        run: |
+          cd src/moltenvk
+          ./fetchDependencies --ios
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
+          touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
+          touch -r README.md Package/Release/MoltenVK/include/vk_video/*
+          touch -r README.md Package/Release/MoltenVK/include/vulkan/*
+          cp -rp Package/Release/MoltenVK/include/* $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+          cp Package/Release/MoltenVK/MoltenVK.xcframework/ios-arm64/libMoltenVK.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
+      - name: Build MoltenVK for tvOS
+        if: ${{ matrix.sysroot == 'appletvos' }}
+        run: |
+          cd src/moltenvk
+          ./fetchDependencies --tvos
+          xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
+          touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
+          touch -r README.md Package/Release/MoltenVK/include/vk_video/*
+          touch -r README.md Package/Release/MoltenVK/include/vulkan/*
+          cp -rp Package/Release/MoltenVK/include/* $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
+          cp Package/Release/MoltenVK/MoltenVK.xcframework/tvos-arm64_arm64e/libMoltenVK.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
       - name: Archive
         run: |     
           mv $HOME/dependencies-${{ matrix.sysroot }}-arm64 ./dependencies-${{ matrix.sysroot }}
+          rm -rf dependencies-${{ matrix.sysroot }}/share
           tar -cJf dependencies-${{ matrix.sysroot }}.tar.xz dependencies-${{ matrix.sysroot }}
       - name: Upload iOS and tvOS deps
         uses: ncipollo/release-action@v1
