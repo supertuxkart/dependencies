@@ -132,7 +132,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
           -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
           -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=OFF -DBUILD_SHARED_LIBS=OFF \
-          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE
+          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE \
+          -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=TRUE
           make -j5
           make install
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
@@ -163,7 +164,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
           -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
           -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=ON  -DBUILD_SHARED_LIBS=OFF \
-          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE
+          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE \
+          -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=TRUE
           make -j5
           # Don't make install again as the timestamp will be overwritten after git reset --hard
           cp libfreetype.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
