@@ -46,3 +46,9 @@
 [submodule "src/moltenvk"]
 	path = src/moltenvk
 	url = https://github.com/KhronosGroup/MoltenVK
+[submodule "src/wayland"]
+	path = src/wayland
+	url = https://github.com/wayland-project/wayland
+[submodule "src/bluez"]
+	path = src/bluez
+	url = https://github.com/bluez/bluez
