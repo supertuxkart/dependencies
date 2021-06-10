@@ -325,7 +325,6 @@ jobs:
           tar xf build/moltenvk.tar.xz
           cd src/moltenvk
           ./fetchDependencies --macos --iossim --tvossim
-          sed -i '' "s/10.11/10.9/g" MoltenVK/MoltenVK.xcodeproj/project.pbxproj
           xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (macOS only)" -configuration "Release"
           xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -destination "generic/platform=iOS Simulator" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
           xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -destination "generic/platform=tvOS Simulator" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
@@ -333,7 +332,7 @@ jobs:
           touch -r README.md Package/Release/MoltenVK/include/vk_video/*
           touch -r README.md Package/Release/MoltenVK/include/vulkan/*
           cp -rp Package/Release/MoltenVK/include/* ../../dependencies-macosx/include
-          cp Package/Release/MoltenVK/MoltenVK.xcframework/macos-arm64_x86_64/libMoltenVK.a ../../dependencies-macosx/lib
+          cp Package/Release/MoltenVK/dylib/macOS/libMoltenVK.dylib ../../dependencies-macosx/lib
           cp -rp Package/Release/MoltenVK/include/* ../../dependencies-iphonesimulator/include
           cp Package/Release/MoltenVK/MoltenVK.xcframework/ios-arm64_x86_64-simulator/libMoltenVK.a ../../dependencies-iphonesimulator/lib
           cp -rp Package/Release/MoltenVK/include/* ../../dependencies-appletvsimulator/include
