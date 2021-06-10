@@ -172,7 +172,6 @@ jobs:
       - name: Build Ogg
         run: |
           cd src/libogg
-          sed -i '' "s/include <sys\/types.h>/include <stdint.h>/g" include/ogg/os_types.h
           mkdir build
           cd build
           cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
