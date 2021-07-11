@@ -15,7 +15,7 @@
 	url = https://github.com/glennrp/libpng
 [submodule "src/freetype"]
 	path = src/freetype
-	url = https://gitlab.freedesktop.org/freetype/freetype
+	url = https://github.com/freetype/freetype
 [submodule "src/harfbuzz"]
 	path = src/harfbuzz
 	url = https://github.com/harfbuzz/harfbuzz
