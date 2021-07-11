@@ -53,7 +53,7 @@ jobs:
       - name: Archive
         run: |
           cd src
-          tar --exclude-vcs -cJvf ../dependencies-android-src.tar.xz --exclude=libvpx --exclude=libopenglrecorder --exclude=sqlite --exclude=libsamplerate --exclude=moltenvk .
+          tar --exclude-vcs -cJvf ../dependencies-android-src.tar.xz --exclude=libvpx --exclude=libopenglrecorder --exclude=sqlite --exclude=libsamplerate --exclude=moltenvk --exclude=bluez --exclude=wayland .
       - name: Upload android deps
         uses: ncipollo/release-action@v1
         with:
