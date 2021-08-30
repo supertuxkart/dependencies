@@ -397,17 +397,21 @@ jobs:
             -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
             -DALSOFT_CPUEXT_SSE=OFF -DALSOFT_CPUEXT_SSE2=OFF -DALSOFT_CPUEXT_SSE3=OFF \
             -DALSOFT_CPUEXT_SSE4_1=OFF -DALSOFT_ENABLE_SSE_CODEGEN=OFF \
-            -DALSOFT_ENABLE_SSE2_CODEGEN=OFF
+            -DALSOFT_ENABLE_SSE2_CODEGEN=OFF -DCMAKE_DLLTOOL=""
           elif [ ${{ matrix.arch }} = "aarch64" ]; then
+            # Without -DCMAKE_DLLTOOL="": error: no target machine specified when llvm-dlltool
+            # We generate .lib ourselves later anyway
             cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON
+            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
+            -DCMAKE_DLLTOOL=""
           else
             cmake .. -DMXE_PREFIX=/data/mxe/usr \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON
+            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
+            -DCMAKE_DLLTOOL=""
           fi
           make -j4
           if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
