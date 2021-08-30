@@ -456,6 +456,26 @@ jobs:
           cp libopenglrecorder.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
           cp libopenglrecorder.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           cp -p ../openglrecorder.h $HOME/dependencies-win-${{ matrix.arch }}/include
+      - name: Build libsamplerate
+        run: |
+          cd src/libsamplerate
+          mkdir build
+          cd build
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF -DLIBSAMPLERATE_EXAMPLES=OFF
+          make -j5
+          cd src
+          dll2lib.sh ${{ env.dlltool_arch }} libsamplerate-0.dll
+          mv libsamplerate-0.lib libsamplerate.lib
+          cd ..
+          make install
+          cp src/libsamplerate-0.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp src/libsamplerate.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
+          rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
+          rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/libsamplerate.dll.a
       - name: Archive
         run: |
           FOLDER=$(pwd)
