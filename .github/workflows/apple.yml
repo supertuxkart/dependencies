@@ -72,6 +72,7 @@ jobs:
           cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} -DCCTOOLS_ARCH=${{ matrix.arch }} \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}
+          ../../../build_tools/fix_rpath.py $(pwd)
           make -j5
           if [ ${{ matrix.platform }} = "MacOSX" ]; then
             cp -a libz*dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
@@ -88,10 +89,15 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
           -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF \
           -DUSE_SHARED_MBEDTLS_LIBRARY=${{ env.shared }} -DUSE_STATIC_MBEDTLS_LIBRARY=${{ env.static }}
+          ../../../build_tools/fix_rpath.py $(pwd)/library
           make -j5
           make install
-          # Fix dylib permission
-          chmod 755 $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/libmbed*dylib || true
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            # New CMake no longer specify @rpath when install, copy manually
+            cp -a library/libmbed*.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+            # Fix dylib permission
+            chmod 755 $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/libmbed*dylib || true
+          fi
       - name: Build cURL
         run: |
           # Disable bundled zlib
@@ -114,8 +120,12 @@ jobs:
           -DCMAKE_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
           -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none \
           -DCMAKE_C_FLAGS="$extra_flags" -DCMAKE_CXX_FLAGS="$extra_flags"
+          ../../../build_tools/fix_rpath.py $(pwd)/lib
           make -j5
           make install
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            cp -a lib/libcurl.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
@@ -129,8 +139,12 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
           -DPNG_SHARED=${{ env.shared }} -DPNG_STATIC=${{ env.static }} -DPNG_TESTS=OFF -DPNG_ARM_NEON=off
+          ../../../build_tools/fix_rpath.py $(pwd)
           make -j5
           make install
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            cp -a libpng*.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/libpng
@@ -148,8 +162,12 @@ jobs:
           -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
           -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=OFF -DBUILD_SHARED_LIBS=${{ env.shared }} \
           -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE
+          ../../../build_tools/fix_rpath.py $(pwd)
           make -j5
           make install
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            cp -a libfreetype.*dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
           touch -r ../README $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/include/freetype2/freetype/config/*
@@ -163,8 +181,12 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
           -DHB_HAVE_CORETEXT=OFF -DHB_HAVE_FREETYPE=ON -DBUILD_SHARED_LIBS=${{ env.shared }} \
           -DHB_BUILD_SUBSET=OFF
+          ../../../build_tools/fix_rpath.py $(pwd)
           make -j5
           make install
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            cp -a libharfbuzz*.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
       - name: Build FreeType
         run: |
@@ -179,6 +201,7 @@ jobs:
           -DFT_WITH_ZLIB=ON -DFT_WITH_BZIP2=OFF -DFT_WITH_BROTLI=OFF \
           -DFT_WITH_PNG=ON -DFT_WITH_HARFBUZZ=ON -DBUILD_SHARED_LIBS=${{ env.shared }} \
           -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE
+          ../../../build_tools/fix_rpath.py $(pwd)
           make -j5
           # Don't make install again as the timestamp will be overwritten after git reset --hard
           cp -a libfreetype.*dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib || true
@@ -193,8 +216,12 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
           -DBUILD_SHARED_LIBS=${{ env.shared }} -DBUILD_TESTING=OFF -DINSTALL_DOCS=OFF \
           -DINSTALL_PKG_CONFIG_MODULE=OFF -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          ../../../build_tools/fix_rpath.py $(pwd)
           make -j5
           make install
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            cp -a libogg*.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
           touch -r ../README.md $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/include/ogg/*
       - name: Build Vorbis
         run: |
@@ -205,8 +232,12 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
           -DBUILD_SHARED_LIBS=${{ env.shared }} -DINSTALL_CMAKE_PACKAGE_MODULE=OFF
+          ../../../build_tools/fix_rpath.py $(pwd)/lib
           make -j5
           make install
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            cp -a lib/libvorbis*.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
       - name: Build libjpeg-turbo
         run: |
@@ -237,8 +268,12 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
           -DLIBSAMPLERATE_EXAMPLES=OFF -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=${{ env.shared }}
+          ../../../build_tools/fix_rpath.py $(pwd)/src
           make -j5
           make install
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            cp -a src/libsamplerate*.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
       - name: Prepare upload
