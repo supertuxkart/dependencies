@@ -207,6 +207,9 @@ jobs:
       - name: Build HarfBuzz
         run: |
           cd src/harfbuzz
+          # Remove libwinpthread-1.dll dependency
+          sed -i '/add_definitions("-DHAVE_PTHREAD")/d' CMakeLists.txt
+          sed -i '/list(APPEND THIRD_PARTY_LIBS Threads::Threads)/d' CMakeLists.txt
           mkdir build
           cd build
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
