@@ -282,6 +282,8 @@ jobs:
         run: |
           sudo apt install -y yasm
           cd src/libjpeg
+          # Windows XP compatibility
+          sed -i 's/#ifndef NO_PUTENV/#define NO_PUTENV\n#ifndef NO_PUTENV/g' jinclude.h
           mkdir build
           cd build
           # libjpeg install library to lib64 folder, override it
