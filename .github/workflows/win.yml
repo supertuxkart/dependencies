@@ -115,6 +115,7 @@ jobs:
           -DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=OFF
           make -j4
           make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}/cmake
           cd library
           dll2lib.sh ${{ env.dlltool_arch }} libmbedcrypto.dll
           dll2lib.sh ${{ env.dlltool_arch }} libmbedx509.dll
@@ -122,8 +123,6 @@ jobs:
           cp *.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp *.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/*.a
-          # Move .dll to bin so cmake will find .lib first
-          mv $HOME/dependencies-win-${{ matrix.arch }}/lib/libmbed*.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
       - name: Build cURL
         run: |
           cd src/curl

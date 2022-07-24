@@ -85,6 +85,7 @@ jobs:
           -DUSE_SHARED_MBEDTLS_LIBRARY=OFF -DUSE_STATIC_MBEDTLS_LIBRARY=ON
           make -j5
           make install
+          rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/cmake
       - name: Build cURL
         run: |
           cd src/curl

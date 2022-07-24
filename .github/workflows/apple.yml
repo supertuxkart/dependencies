@@ -98,6 +98,7 @@ jobs:
             # Fix dylib permission
             chmod 755 $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/libmbed*dylib || true
           fi
+          rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/cmake
       - name: Build cURL
         run: |
           # Disable bundled zlib
