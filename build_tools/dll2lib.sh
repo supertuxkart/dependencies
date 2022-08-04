@@ -8,7 +8,8 @@ make_implib()
     libfile="${dll%.dll}.lib"
 
     # Extract exports from the .edata section, writing results to the .def file.
-    symbols=$(llvm-objdump -p "$dll" | awk '/Ordinal/,0 '|tail -n +3|awk '{print $3}')
+    # Remove the export of pthread_* functions to avoid linking errors
+    symbols=$(llvm-objdump -p "$dll" | awk '/Ordinal/,0 '|tail -n +3|awk '{print $3}'|sed '/pthread_/d')
     if [[ -z "$symbols" ]]; then
         echo "No symbols found"
         exit -1
