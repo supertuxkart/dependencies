@@ -227,6 +227,22 @@ jobs:
           make install
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/pkgconfig
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib/cmake
+      - name: Build astc-encoder
+        run: |
+          cd src/astc-encoder
+          sed -i '' '/-Werror/d' Source/cmake_core.cmake
+          sed -i '' 's|${ASTC_TARGET}-static|astcenc|g' Source/cmake_core.cmake
+          mkdir build
+          cd build
+          cmake .. -DIOS_SYSROOT=${{ matrix.sysroot }} -DIOS_ARCH=${{ matrix.arch }} \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-ios.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }} \
+          -DISA_NEON=ON -DNO_INVARIANCE=ON -DCLI=OFF \
+          -DCMAKE_C_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1' \
+          -DCMAKE_CXX_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1'
+          make -j5
+          cp -a Source/libastcenc.a $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/lib
+          cp -p ../Source/astcenc.h $HOME/dependencies-${{ matrix.sysroot }}-${{ matrix.arch }}/include
       - name: Build SDL2
         # Only need to run for 1 arch as SDL2 project includes universal arch support
         if: ${{ matrix.arch == 'arm64' }}

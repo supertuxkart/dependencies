@@ -277,6 +277,42 @@ jobs:
           fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
+      - name: Build astc-encoder
+        run: |
+          cd src/astc-encoder
+          sed -i '/-Werror/d' Source/cmake_core.cmake
+          sed -i 's|${ASTC_TARGET}-static|astcenc|g' Source/cmake_core.cmake
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            sed -i 's|STATIC|SHARED|g' Source/cmake_core.cmake
+          fi
+          mkdir build
+          cd build
+          # We require SSE4.1 (x86_64) or NEON (arm*) for astc-encoder
+          if [ ${{ matrix.arch }} = "x86_64" ]; then
+            cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} \
+            -DCCTOOLS_ARCH=${{ matrix.arch }} \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
+            -DISA_SSE41=ON -DNO_INVARIANCE=ON -DCLI=OFF \
+            -DCMAKE_C_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1' \
+            -DCMAKE_CXX_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1'
+          else
+            cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} \
+            -DCCTOOLS_ARCH=${{ matrix.arch }} \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
+            -DISA_NEON=ON -DNO_INVARIANCE=ON -DCLI=OFF \
+            -DCMAKE_C_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1' \
+            -DCMAKE_CXX_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1'
+          fi
+          make -j5
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            /opt/cctools/bin/x86_64-apple-darwin11-install_name_tool -id @rpath/libastcenc.dylib Source/libastcenc.dylib
+            cp -a Source/libastcenc.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          else
+            cp -a Source/libastcenc.a $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+          fi
+          cp -p ../Source/astcenc.h $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/include
       - name: Prepare upload
         run: |
           mv $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} .

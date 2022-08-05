@@ -480,6 +480,46 @@ jobs:
           rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/pkgconfig
           rm -rf $HOME/dependencies-win-${{ matrix.arch }}/lib/cmake
           rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/libsamplerate.dll.a
+      - name: Build astc-encoder
+        run: |
+          cd src/astc-encoder
+          sed -i '/-Werror/d' Source/cmake_core.cmake
+          sed -i 's|${ASTC_TARGET}-static|astcenc|g' Source/cmake_core.cmake
+          sed -i 's|STATIC|SHARED|g' Source/cmake_core.cmake
+          sed -i 's|!defined(__clang__) && defined(_MSC_VER)|1|g' Source/astcenc_platform_isa_detection.cpp
+          sed -i 's|Windows.h|windows.h|g' Source/astcenc_platform_isa_detection.cpp
+          mkdir build
+          cd build
+          # We require SSE4.1 (x86_64) or NEON (arm*) for astc-encoder
+          # SSE2 for i686 because SSE4.1 fails to compile
+          if [ ${{ matrix.arch }} = "aarch64" ]; then
+            cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+            -DISA_NEON=ON -DNO_INVARIANCE=ON -DCLI=OFF \
+            -DCMAKE_C_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1' \
+            -DCMAKE_CXX_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1'
+          elif [ ${{ matrix.arch }} = "i686" ]; then
+            cmake .. -DMXE_PREFIX=/data/mxe/usr \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+            -DISA_SSE2=ON -DNO_INVARIANCE=ON -DCLI=OFF \
+            -DCMAKE_C_FLAGS='-msse3 -O2 -DASTCENC_DYNAMIC_LIBRARY=1' \
+            -DCMAKE_CXX_FLAGS='-msse3 -O2 -DASTCENC_DYNAMIC_LIBRARY=1'
+          else
+            cmake .. -DMXE_PREFIX=/data/mxe/usr \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+            -DISA_SSE41=ON -DNO_INVARIANCE=ON -DCLI=OFF \
+            -DCMAKE_C_FLAGS='-O2 -DASTCENC_DYNAMIC_LIBRARY=1' \
+            -DCMAKE_CXX_FLAGS='-O2 -DASTCENC_DYNAMIC_LIBRARY=1'
+          fi
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} Source/libastcenc.dll
+          cp Source/libastcenc.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp Source/libastcenc.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
+          cp Source/libastcenc.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          cp -p ../Source/astcenc.h $HOME/dependencies-win-${{ matrix.arch }}/include
       - name: Archive
         run: |
           FOLDER=$(pwd)

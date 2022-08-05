@@ -52,3 +52,6 @@
 [submodule "src/bluez"]
 	path = src/bluez
 	url = https://github.com/bluez/bluez
+[submodule "src/astc-encoder"]
+	path = src/astc-encoder
+	url = https://github.com/ARM-software/astc-encoder
