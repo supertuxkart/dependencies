@@ -373,13 +373,16 @@ jobs:
       - name: Build SDL2
         run: |
           cd src/sdl2
+          # Windows XP compatibility
+          sed -i 's/defined(__WINRT__) || defined(__GDK__)/0/g' src/audio/wasapi/SDL_wasapi.c
           mkdir build
           cd build
           # Sensor is causing problems in msvc debugger
+          # Disable D3D12 renderer for Windows XP compatibility
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-          -DBUILD_SHARED_LIBS=ON -DSDL_SENSOR=OFF
+          -DBUILD_SHARED_LIBS=ON -DSDL_SENSOR=OFF -DSDL_RENDER_D3D=OFF
           make -j4
           dll2lib.sh ${{ env.dlltool_arch }} SDL2.dll
           # Manually install the header for msvc usage
