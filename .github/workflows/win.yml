@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        arch: [i686, x86_64, aarch64]
+        arch: [i686, x86_64, armv7, aarch64]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -49,6 +49,10 @@ jobs:
         if: ${{ matrix.arch == 'x86_64' }}
         run: |
           echo "dlltool_arch=i386:x86-64" >> $GITHUB_ENV
+      - name: Setting up llvm-dlltool arch for armv7
+        if: ${{ matrix.arch == 'armv7' }}
+        run: |
+          echo "dlltool_arch=arm" >> $GITHUB_ENV
       - name: Setting up llvm-dlltool arch for aarch64
         if: ${{ matrix.arch == 'aarch64' }}
         run: |
@@ -108,11 +112,17 @@ jobs:
           sed -i 's/if defined(_TRUNCATE)/if 0/g' library/platform.c
           mkdir build
           cd build
+          unset EXTRA_CFLAGS
+          if [ ${{ matrix.arch }} = "armv7" ]; then
+            # Required for armv7 build, otherwise including bn_mul.h fails
+            EXTRA_CFLAGS="-DMULADDC_CANNOT_USE_R7=0"
+          fi
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
           -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF \
-          -DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=OFF
+          -DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=OFF \
+          -DCMAKE_C_FLAGS=$EXTRA_CFLAGS
           make -j4
           make install
           rm -rf $HOME/dependencies-${{ matrix.sysroot }}/cmake
@@ -321,6 +331,12 @@ jobs:
             #EXTRA_CFLAGS="-mstackrealign -gcodeview"
             _runtimecpu="--enable-runtime-cpu-detect"
             _compiler=/data/mxe/usr/bin/${{ matrix.arch }}-w64-mingw32.static.posix.dw2-
+          elif [ ${{ matrix.arch }} = "armv7" ]; then
+            _targetarch="armv7-win32-gcc"
+            EXTRA_CFLAGS="-gcodeview"
+            # Arm doesn't support runtime cpu detection
+            _runtimecpu="--disable-runtime-cpu-detect"
+            _compiler=$HOME/llvm-mingw/bin/${{ matrix.arch }}-w64-mingw32-
           elif [ ${{ matrix.arch }} = "aarch64" ]; then
             _targetarch="arm64-win64-gcc"
             EXTRA_CFLAGS="-gcodeview"
@@ -349,7 +365,7 @@ jobs:
           --enable-vp9 \
           --enable-vp9-highbitdepth \
           --enable-vp9-temporal-denoising
-          if [ ${{ matrix.arch }} = "aarch64" ]; then
+          if [ ${{ matrix.arch }} = "armv7" ] || [ ${{ matrix.arch }} = "aarch64" ]; then
             sed -i 's/-Wl,--no-undefined/-Wl,-undefined,error/g' Makefile
             sed -i 's/-Wl,-soname,$$(SONAME)//g' Makefile
             sed -i 's/-Wl,--version-script,$$(EXPORTS_FILE) /-Wl,-pdb=libvpx.pdb /g' Makefile
@@ -405,7 +421,7 @@ jobs:
             -DALSOFT_CPUEXT_SSE=OFF -DALSOFT_CPUEXT_SSE2=OFF -DALSOFT_CPUEXT_SSE3=OFF \
             -DALSOFT_CPUEXT_SSE4_1=OFF -DALSOFT_ENABLE_SSE_CODEGEN=OFF \
             -DALSOFT_ENABLE_SSE2_CODEGEN=OFF -DCMAKE_DLLTOOL="" -DALSOFT_BACKEND_PIPEWIRE=OFF
-          elif [ ${{ matrix.arch }} = "aarch64" ]; then
+          elif [ ${{ matrix.arch }} = "armv7" ] || [ ${{ matrix.arch }} = "aarch64" ]; then
             # Without -DCMAKE_DLLTOOL="": error: no target machine specified when llvm-dlltool
             # We generate .lib ourselves later anyway
             cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
@@ -495,7 +511,14 @@ jobs:
           cd build
           # We require SSE4.1 (x86_64) or NEON (arm*) for astc-encoder
           # SSE2 for i686 because SSE4.1 fails to compile
-          if [ ${{ matrix.arch }} = "aarch64" ]; then
+          if [ ${{ matrix.arch }} = "armv7" ]; then
+            cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+            -DISA_NEON=OFF -DNO_INVARIANCE=ON -DCLI=OFF \
+            -DCMAKE_C_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1' \
+            -DCMAKE_CXX_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1'
+          elif [ ${{ matrix.arch }} = "aarch64" ]; then
             cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
