@@ -191,6 +191,10 @@ jobs:
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
       - name: Build FreeType
         run: |
+          # Circular dependency of freetype crashes gatekeeper on MacOSX (stack overflowed)
+          if [ ${{ matrix.platform }} = "MacOSX" ]; then
+            exit 0
+          fi
           cd src/freetype
           git reset --hard
           rm -rf build
