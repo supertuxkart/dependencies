@@ -258,7 +258,7 @@ jobs:
         run: |
           cd src/moltenvk
           ./fetchDependencies --ios
-          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -configuration "Release"
           touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
           touch -r README.md Package/Release/MoltenVK/include/vk_video/*
           touch -r README.md Package/Release/MoltenVK/include/vulkan/*
@@ -269,7 +269,7 @@ jobs:
         run: |
           cd src/moltenvk
           ./fetchDependencies --tvos
-          xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
+          xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -configuration "Release"
           touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
           touch -r README.md Package/Release/MoltenVK/include/vk_video/*
           touch -r README.md Package/Release/MoltenVK/include/vulkan/*

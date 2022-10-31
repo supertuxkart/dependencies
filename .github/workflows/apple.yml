@@ -246,7 +246,6 @@ jobs:
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
       - name: Build libjpeg-turbo
         run: |
-          # yasm doesn't support -fembed-bitcode
           # As jpeg is not performance crticial enough for STK so it's built with asm disabled for non-MacOSX
           if [ ${{ matrix.platform }} = "MacOSX" ]; then
             sudo apt install -y yasm
@@ -401,8 +400,8 @@ jobs:
           cd src/moltenvk
           ./fetchDependencies --macos --iossim --tvossim
           xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (macOS only)" -configuration "Release"
-          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -destination "generic/platform=iOS Simulator" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
-          xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -destination "generic/platform=tvOS Simulator" -configuration "Release" OTHER_CFLAGS="-fembed-bitcode" BITCODE_GENERATION_MODE="bitcode"
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -destination "generic/platform=iOS Simulator" -configuration "Release"
+          xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -destination "generic/platform=tvOS Simulator" -configuration "Release"
           touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
           touch -r README.md Package/Release/MoltenVK/include/vk_video/*
           touch -r README.md Package/Release/MoltenVK/include/vulkan/*
