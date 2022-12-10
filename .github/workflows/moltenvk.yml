@@ -1,0 +1,46 @@
+name: moltenvk
+on:
+  push:
+    branches:
+      - moltenvk
+  pull_request: {}
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-12
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1.5.1
+        with:
+          xcode-version: latest-stable
+      - name: Build MoltenVK
+        run: |
+          wget https://github.com/KhronosGroup/MoltenVK/archive/refs/tags/v1.2.1.zip -O v1.2.1.zip
+          unzip v1.2.1.zip
+          cd MoltenVK-1.2.1
+          for file in ExternalDependencies.xcodeproj/project.pbxproj MoltenVK/MoltenVK.xcodeproj/project.pbxproj MoltenVKShaderConverter/MoltenVKShaderConverter.xcodeproj/project.pbxproj
+          do
+          sed -i '' 's/MACOSX_DEPLOYMENT_TARGET = 10.13/MACOSX_DEPLOYMENT_TARGET = 10.11/g' $file
+          sed -i '' 's/TVOS_DEPLOYMENT_TARGET = 11.0/TVOS_DEPLOYMENT_TARGET = 9.0/g' $file
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 11.0/IPHONEOS_DEPLOYMENT_TARGET = 9.0;\n\t\t\t\tOTHER_CFLAGS = "-fno-objc-msgsend-selector-stubs -Wno-unused-command-line-argument"/g' $file
+          done
+          ./fetchDependencies --macos --iossim --tvossim --ios --tvos
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -destination "generic/platform=iOS Simulator" -configuration "Release"
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (tvOS only)" -destination "generic/platform=tvOS Simulator" -configuration "Release"
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -configuration "Release" IPHONEOS_DEPLOYMENT_TARGET=9.0
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (tvOS only)" -configuration "Release" TVOS_DEPLOYMENT_TARGET=9.0
+          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (macOS only)" -configuration "Release" MACOSX_DEPLOYMENT_TARGET=10.11
+          touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
+          touch -r README.md Package/Release/MoltenVK/include/vk_video/*
+          touch -r README.md Package/Release/MoltenVK/include/vulkan/*
+          tar -cJf ../moltenvk-1.2.1.tar.xz -C Package/Release/MoltenVK .
+      - name: Upload MoltenVK
+        uses: ncipollo/release-action@v1.11.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: moltenvk-1.2.1.tar.xz
+          tag: "moltenvk"
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          allowUpdates: true
+          prerelease: true
