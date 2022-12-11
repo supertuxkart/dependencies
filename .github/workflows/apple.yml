@@ -14,19 +14,16 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        #If Xcode includes LLVM 12 we can re-enable it, LLVM 12 has some new bitcode
-        #code updated which is not compatible with LLVM 11 from Xcode 12.x
-        #platform: [iPhoneOS, iPhoneSimulator, AppleTVOS, AppleTVSimulator, MacOSX]
-        platform: [iPhoneSimulator, AppleTVSimulator, MacOSX]
+        platform: [iPhoneOS, iPhoneSimulator, AppleTVOS, AppleTVSimulator, MacOSX]
         arch: [arm64, x86_64]
-        #exclude:
-        #  - platform: iPhoneOS
-        #    arch: x86_64
-        #  - platform: AppleTVOS
-        #    arch: x86_64
+        exclude:
+          - platform: iPhoneOS
+            arch: x86_64
+          - platform: AppleTVOS
+            arch: x86_64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.5.0
         with:
           fetch-depth: 1
           submodules: true
@@ -37,12 +34,11 @@ jobs:
           do
             cd $dir
             timestamp=$(git log --date=local --pretty=format:"%cd" --date=format:'%Y%m%d%H%M.%S' . | head -1)
-            # Ignore errors from MoltenVK submodules
-            find . -exec touch -t $timestamp {} + || true
+            find . -exec touch -t $timestamp {} +
             cd ..
           done
       - id: sysroot
-        uses: ASzc/change-string-case-action@v1
+        uses: ASzc/change-string-case-action@v5
         with:
           string: ${{ matrix.platform }}
       - name: Configure shared build for MacOSX
@@ -58,8 +54,9 @@ jobs:
       - name: Download cctools
         run: |
           cd /opt
-          wget https://github.com/supertuxkart/dependencies/releases/download/preview/cctools.tar.xz
-          tar xf cctools.tar.xz
+          wget https://github.com/supertuxkart/dependencies/releases/download/cctools/cctools-14.1.tar.xz
+          tar xf cctools-14.1.tar.xz
+          rm cctools-14.1.tar.xz
       - name: Build zlib
         run: |
           cd src/zlib
@@ -82,6 +79,8 @@ jobs:
       - name: Build Mbed TLS
         run: |
           cd src/mbedtls
+          # Remove empty paragraph passed to '\retval' error
+          sed -i 's/set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")//g' CMakeLists.txt
           mkdir build
           cd build
           cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} -DCCTOOLS_ARCH=${{ matrix.arch }} \
@@ -322,21 +321,23 @@ jobs:
           rm -rf dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/share
           mkdir build
           tar -cJf build/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}.tar.xz dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}
-      - name: Copy SDL2 and MoltenVK
+      - name: Copy SDL2
         if: ${{ matrix.platform == 'iPhoneSimulator' && matrix.arch == 'arm64' }}
         run: |
           tar -cJf build/sdl.tar.xz src/sdl2
-          tar -cJf build/moltenvk.tar.xz src/moltenvk
       - name: Upload dependencies
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: build
           path: build/*
   packaging:
     name: Packaging dependencies
     needs: build
-    runs-on: macos-latest
+    runs-on: macos-12
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1.5.1
+        with:
+          xcode-version: latest-stable
       - name: Configure packaging name for git master branch
         if: ${{ github.ref == 'refs/heads/master' }}
         run: |
@@ -361,10 +362,10 @@ jobs:
         uses: actions/download-artifact@v2
       - name: lipo -create libraries
         run: |
-          #tar xf build/dependencies-iphoneos-arm64.tar.xz
+          tar xf build/dependencies-iphoneos-arm64.tar.xz
           tar xf build/dependencies-iphonesimulator-x86_64.tar.xz
           tar xf build/dependencies-iphonesimulator-arm64.tar.xz
-          #tar xf build/dependencies-appletvos-arm64.tar.xz
+          tar xf build/dependencies-appletvos-arm64.tar.xz
           tar xf build/dependencies-appletvsimulator-x86_64.tar.xz
           tar xf build/dependencies-appletvsimulator-arm64.tar.xz
           tar xf build/dependencies-macosx-x86_64.tar.xz
@@ -392,25 +393,8 @@ jobs:
             cd ../..
           done
           # Only single arch for iphoneos and appletvos
-          #mv dependencies-iphoneos-arm64 dependencies-iphoneos
-          #mv dependencies-appletvos-arm64 dependencies-appletvos
-      - name: Build MoltenVK
-        run: |
-          tar xf build/moltenvk.tar.xz
-          cd src/moltenvk
-          ./fetchDependencies --macos --iossim --tvossim
-          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (macOS only)" -configuration "Release"
-          xcodebuild build -quiet -project MoltenVKPackaging.xcodeproj -scheme "MoltenVK Package (iOS only)" -destination "generic/platform=iOS Simulator" -configuration "Release"
-          xcodebuild build -quiet -project "MoltenVKPackaging.xcodeproj" -scheme "MoltenVK Package (tvOS only)" -destination "generic/platform=tvOS Simulator" -configuration "Release"
-          touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
-          touch -r README.md Package/Release/MoltenVK/include/vk_video/*
-          touch -r README.md Package/Release/MoltenVK/include/vulkan/*
-          cp -rp Package/Release/MoltenVK/include/* ../../dependencies-macosx/include
-          cp Package/Release/MoltenVK/dylib/macOS/libMoltenVK.dylib ../../dependencies-macosx/lib
-          cp -rp Package/Release/MoltenVK/include/* ../../dependencies-iphonesimulator/include
-          cp Package/Release/MoltenVK/MoltenVK.xcframework/ios-arm64_x86_64-simulator/libMoltenVK.a ../../dependencies-iphonesimulator/lib
-          cp -rp Package/Release/MoltenVK/include/* ../../dependencies-appletvsimulator/include
-          cp Package/Release/MoltenVK/MoltenVK.xcframework/tvos-arm64_x86_64-simulator/libMoltenVK.a ../../dependencies-appletvsimulator/lib
+          mv dependencies-iphoneos-arm64 dependencies-iphoneos
+          mv dependencies-appletvos-arm64 dependencies-appletvos
       - name: Build SDL2
         run: |
           tar xf build/sdl.tar.xz
@@ -418,27 +402,41 @@ jobs:
           xcodebuild -project SDL.xcodeproj -target "Shared Library" -configuration Release -sdk macosx CONFIGURATION_BUILD_DIR=./build-macosx
           cp -a build-macosx/libSDL2.dylib ../../../../dependencies-macosx/lib
           cp -rp ../../include ../../../../dependencies-macosx/include/SDL2
-          #xcodebuild -project SDL.xcodeproj -target "Static Library-iOS" -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=./build-iphoneos
-          #cp build-iphoneos/libSDL2.a ../../../../dependencies-iphoneos/lib
-          #cp -rp ../../include ../../../../dependencies-iphoneos/include/SDL2
-          xcodebuild -project SDL.xcodeproj -target "Static Library-iOS" -configuration Release -sdk iphonesimulator CONFIGURATION_BUILD_DIR=./build-iphonesimulator
+          xcodebuild -project SDL.xcodeproj -target "Static Library-iOS" -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=./build-iphoneos OTHER_CFLAGS="-fno-objc-msgsend-selector-stubs -Wno-unused-command-line-argument"
+          cp build-iphoneos/libSDL2.a ../../../../dependencies-iphoneos/lib
+          cp -rp ../../include ../../../../dependencies-iphoneos/include/SDL2
+          xcodebuild -project SDL.xcodeproj -target "Static Library-iOS" -configuration Release -sdk iphonesimulator CONFIGURATION_BUILD_DIR=./build-iphonesimulator OTHER_CFLAGS="-fno-objc-msgsend-selector-stubs -Wno-unused-command-line-argument"
           cp build-iphonesimulator/libSDL2.a ../../../../dependencies-iphonesimulator/lib
           cp -rp ../../include ../../../../dependencies-iphonesimulator/include/SDL2
-          #xcodebuild -project SDL.xcodeproj -target "Static Library-tvOS" -configuration Release -sdk appletvos CONFIGURATION_BUILD_DIR=./build-appletvos
-          #cp build-appletvos/libSDL2.a ../../../../dependencies-appletvos/lib
-          #cp -rp ../../include ../../../../dependencies-appletvos/include/SDL2
-          xcodebuild -project SDL.xcodeproj -target "Static Library-tvOS" -configuration Release -sdk appletvsimulator CONFIGURATION_BUILD_DIR=./build-appletvsimulator
+          xcodebuild -project SDL.xcodeproj -target "Static Library-tvOS" -configuration Release -sdk appletvos CONFIGURATION_BUILD_DIR=./build-appletvos OTHER_CFLAGS="-fno-objc-msgsend-selector-stubs -Wno-unused-command-line-argument"
+          cp build-appletvos/libSDL2.a ../../../../dependencies-appletvos/lib
+          cp -rp ../../include ../../../../dependencies-appletvos/include/SDL2
+          xcodebuild -project SDL.xcodeproj -target "Static Library-tvOS" -configuration Release -sdk appletvsimulator CONFIGURATION_BUILD_DIR=./build-appletvsimulator OTHER_CFLAGS="-fno-objc-msgsend-selector-stubs -Wno-unused-command-line-argument"
           cp build-appletvsimulator/libSDL2.a ../../../../dependencies-appletvsimulator/lib
           cp -rp ../../include ../../../../dependencies-appletvsimulator/include/SDL2
+      - name: Add MoltenVK
+        run: |
+          wget https://github.com/supertuxkart/dependencies/releases/download/moltenvk/moltenvk-1.2.1.tar.xz
+          mkdir moltenvk
+          tar xf moltenvk-1.2.1.tar.xz -C moltenvk
+          for platform in macosx iphoneos iphonesimulator appletvos appletvsimulator; do
+            cp -rp moltenvk/include/MoltenVK dependencies-$platform/include
+            cp -rp moltenvk/include/vulkan dependencies-$platform/include
+          done
+          cp moltenvk/dylib/macOS/libMoltenVK.dylib dependencies-macosx/lib
+          cp moltenvk/MoltenVK.xcframework/ios-arm64/libMoltenVK.a dependencies-iphoneos/lib
+          cp moltenvk/MoltenVK.xcframework/ios-arm64_x86_64-simulator/libMoltenVK.a dependencies-iphonesimulator/lib
+          cp moltenvk/MoltenVK.xcframework/tvos-arm64_arm64e/libMoltenVK.a dependencies-appletvos/lib
+          cp moltenvk/MoltenVK.xcframework/tvos-arm64_x86_64-simulator/libMoltenVK.a dependencies-appletvsimulator/lib
       - name: Archive
         run: |
           tar -cJf dependencies-macosx.tar.xz dependencies-macosx
-          #tar -cJf dependencies-iphoneos.tar.xz dependencies-iphoneos
+          tar -cJf dependencies-iphoneos.tar.xz dependencies-iphoneos
           tar -cJf dependencies-iphonesimulator.tar.xz dependencies-iphonesimulator
-          #tar -cJf dependencies-appletvos.tar.xz dependencies-appletvos
+          tar -cJf dependencies-appletvos.tar.xz dependencies-appletvos
           tar -cJf dependencies-appletvsimulator.tar.xz dependencies-appletvsimulator
       - name: Upload Apple dependencies
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@v1.11.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: "dependencies*.xz"

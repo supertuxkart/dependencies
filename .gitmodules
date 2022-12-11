@@ -43,9 +43,6 @@
 [submodule "src/libsamplerate"]
 	path = src/libsamplerate
 	url = https://github.com/libsndfile/libsamplerate
-[submodule "src/moltenvk"]
-	path = src/moltenvk
-	url = https://github.com/KhronosGroup/MoltenVK
 [submodule "src/wayland"]
 	path = src/wayland
 	url = https://github.com/wayland-project/wayland

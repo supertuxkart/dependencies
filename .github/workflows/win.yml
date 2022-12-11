@@ -17,7 +17,7 @@ jobs:
         arch: [i686, x86_64, armv7, aarch64]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.5.0
         with:
           fetch-depth: 1
           submodules: true
@@ -74,6 +74,8 @@ jobs:
           sudo wget https://github.com/supertuxkart/dependencies/releases/download/preview/mxe_static_mingw.zip
           sudo unzip mxe_static_mingw.zip
           sudo rm mxe_static_mingw.zip
+          # For libfl.so.2
+          sudo apt install -y libfl-dev
       - name: Restore timestamps
         run: |
           cd src
@@ -81,8 +83,7 @@ jobs:
           do
             cd $dir
             last_time=$(git log --date=local --pretty=format:"%cd" . | head -1)
-            # Ignore errors from MoltenVK submodules
-            find . -exec touch -d "$last_time" {} + || true
+            find . -exec touch -d "$last_time" {} +
             cd ..
           done
       - name: Build zlib
@@ -552,7 +553,7 @@ jobs:
           rm -rf dependencies-win-${{ matrix.arch }}/share
           zip -r $FOLDER/dependencies-win-${{ matrix.arch }}.zip dependencies-win-${{ matrix.arch }}
       - name: Upload windows deps
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@v1.11.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: "dependencies*.zip"
