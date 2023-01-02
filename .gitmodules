@@ -52,3 +52,6 @@
 [submodule "src/astc-encoder"]
 	path = src/astc-encoder
 	url = https://github.com/ARM-software/astc-encoder
+[submodule "src/shaderc"]
+	path = src/shaderc
+	url = https://github.com/google/shaderc

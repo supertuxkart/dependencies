@@ -546,6 +546,34 @@ jobs:
           cp Source/libastcenc.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
           cp Source/libastcenc.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           cp -p ../Source/astcenc.h $HOME/dependencies-win-${{ matrix.arch }}/include
+      - name: Build shaderc
+        run: |
+          cd src/shaderc
+          utils/git-sync-deps
+          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
+            _toolchain_file=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake
+            sed -i 's/(defined(MINGW_HAS_SECURE_API) && MINGW_HAS_SECURE_API)/0/g' third_party/glslang/glslang/Include/Common.h
+          else
+            _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
+          fi
+          mkdir build
+          cd build
+          cmake .. -DMXE_PREFIX=/data/mxe/usr \
+          -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=${_toolchain_file} \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_INSTALL=1 \
+          -DSHADERC_SKIP_TESTS=1 -DSHADERC_SKIP_EXAMPLES=1 \
+          -DSPIRV_HEADERS_SKIP_INSTALL=1 -DSPIRV_HEADERS_SKIP_EXAMPLES=1 \
+          -DSKIP_SPIRV_TOOLS_INSTALL=1 -DSPIRV_SKIP_TESTS=1 \
+          -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0 \
+          -DENABLE_CTEST=0
+          make -j4
+          dll2lib.sh ${{ env.dlltool_arch }} libshaderc/libshaderc_shared.dll
+          cp libshaderc/libshaderc_shared.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp libshaderc/libshaderc_shared.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
+          cp libshaderc/libshaderc_shared.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
+          cp -ra ../libshaderc/include/shaderc $HOME/dependencies-win-${{ matrix.arch }}/include
       - name: Archive
         run: |
           FOLDER=$(pwd)

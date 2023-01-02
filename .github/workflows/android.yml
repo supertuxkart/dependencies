@@ -49,6 +49,14 @@ jobs:
             find . -exec touch -d "$last_time" {} +
             cd ..
           done
+      - name: Fetch shaderc external deps
+        run: |
+          cd src/shaderc
+          utils/git-sync-deps
+          for dir in "third_party/"*
+          do
+            rm -rf "$dir"/.git 2>/dev/null || :
+          done
       - name: Archive
         run: |
           cd src
