@@ -15,9 +15,9 @@ jobs:
           xcode-version: latest-stable
       - name: Build MoltenVK
         run: |
-          wget https://github.com/KhronosGroup/MoltenVK/archive/refs/tags/v1.2.1.zip -O v1.2.1.zip
-          unzip v1.2.1.zip
-          cd MoltenVK-1.2.1
+          wget https://github.com/KhronosGroup/MoltenVK/archive/refs/tags/v1.2.4.zip -O v1.2.4.zip
+          unzip v1.2.4.zip
+          cd MoltenVK-1.2.4
           for file in ExternalDependencies.xcodeproj/project.pbxproj MoltenVK/MoltenVK.xcodeproj/project.pbxproj MoltenVKShaderConverter/MoltenVKShaderConverter.xcodeproj/project.pbxproj
           do
           sed -i '' 's/MACOSX_DEPLOYMENT_TARGET = 10.13/MACOSX_DEPLOYMENT_TARGET = 10.11/g' $file
@@ -33,12 +33,12 @@ jobs:
           touch -r README.md Package/Release/MoltenVK/include/MoltenVK/*
           touch -r README.md Package/Release/MoltenVK/include/vk_video/*
           touch -r README.md Package/Release/MoltenVK/include/vulkan/*
-          tar -cJf ../moltenvk-1.2.1.tar.xz -C Package/Release/MoltenVK .
+          tar -cJf ../moltenvk-1.2.4.tar.xz -C Package/Release/MoltenVK .
       - name: Upload MoltenVK
         uses: ncipollo/release-action@v1.11.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: moltenvk-1.2.1.tar.xz
+          artifacts: moltenvk-1.2.4.tar.xz
           tag: "moltenvk"
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
