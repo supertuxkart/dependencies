@@ -163,7 +163,7 @@ jobs:
       - name: Build SQLite
         run: |
           cd src/sqlite
-          sed -i 's/${PROJECT_NAME} STATIC/${PROJECT_NAME} SHARED/g' CMakeLists.txt
+          sed -i 's/Rpcrt4.lib/rpcrt4/g' CMakeLists.txt
           mkdir build
           cd build
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
@@ -503,42 +503,32 @@ jobs:
         run: |
           cd src/astc-encoder
           sed -i '/-Werror/d' Source/cmake_core.cmake
-          sed -i 's|${ASTC_TARGET}-static|astcenc|g' Source/cmake_core.cmake
-          sed -i 's|STATIC|SHARED|g' Source/cmake_core.cmake
-          sed -i 's|!defined(__clang__) && defined(_MSC_VER)|1|g' Source/astcenc_platform_isa_detection.cpp
-          sed -i 's|Windows.h|windows.h|g' Source/astcenc_platform_isa_detection.cpp
+          sed -i 's/${ASTCENC_TARGET}-shared/astcenc/g' Source/cmake_core.cmake
           mkdir build
           cd build
-          # We require SSE4.1 (x86_64) or NEON (arm*) for astc-encoder
-          # SSE2 for i686 because SSE4.1 fails to compile
+          # We require SSE4.1 (x86) or NEON (arm*) for astc-encoder
           if [ ${{ matrix.arch }} = "armv7" ]; then
             cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DISA_NEON=OFF -DNO_INVARIANCE=ON -DCLI=OFF \
-            -DCMAKE_C_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1' \
-            -DCMAKE_CXX_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1'
+            -DASTCENC_ISA_NEON=OFF -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
+            -DASTCENC_SHAREDLIB=ON
           elif [ ${{ matrix.arch }} = "aarch64" ]; then
             cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DISA_NEON=ON -DNO_INVARIANCE=ON -DCLI=OFF \
-            -DCMAKE_C_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1' \
-            -DCMAKE_CXX_FLAGS='-DASTCENC_DYNAMIC_LIBRARY=1'
-          elif [ ${{ matrix.arch }} = "i686" ]; then
-            cmake .. -DMXE_PREFIX=/data/mxe/usr \
-            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DISA_SSE2=ON -DNO_INVARIANCE=ON -DCLI=OFF \
-            -DCMAKE_C_FLAGS='-msse3 -O2 -DASTCENC_DYNAMIC_LIBRARY=1' \
-            -DCMAKE_CXX_FLAGS='-msse3 -O2 -DASTCENC_DYNAMIC_LIBRARY=1'
+            -DASTCENC_ISA_NEON=ON -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
+            -DASTCENC_SHAREDLIB=ON
           else
+            if [ ${{ matrix.arch }} = "i686" ]; then
+              sed -i 's/_mm_popcnt_u64/__builtin_popcountll/g' ../Source/astcenc_vecmathlib_sse_4.h
+            fi
+            sed -i 's/_mm_round_ps(a.m, flags)/_mm_round_ps(a.m, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC)/g' ../Source/astcenc_vecmathlib_sse_4.h
             cmake .. -DMXE_PREFIX=/data/mxe/usr \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DISA_SSE41=ON -DNO_INVARIANCE=ON -DCLI=OFF \
-            -DCMAKE_C_FLAGS='-O2 -DASTCENC_DYNAMIC_LIBRARY=1' \
-            -DCMAKE_CXX_FLAGS='-O2 -DASTCENC_DYNAMIC_LIBRARY=1'
+            -DASTCENC_ISA_SSE41=ON -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
+            -DASTCENC_SHAREDLIB=ON -DCMAKE_C_FLAGS='-O2' -DCMAKE_CXX_FLAGS='-O2'
           fi
           make -j4
           dll2lib.sh ${{ env.dlltool_arch }} Source/libastcenc.dll

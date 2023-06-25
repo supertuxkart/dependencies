@@ -9,7 +9,7 @@
 	url = https://github.com/curl/curl
 [submodule "src/sqlite"]
 	path = src/sqlite
-	url = https://github.com/azadkuh/sqlite-amalgamation
+	url = https://github.com/rhuijben/sqlite-amalgamation
 [submodule "src/libpng"]
 	path = src/libpng
 	url = https://github.com/glennrp/libpng
@@ -45,7 +45,7 @@
 	url = https://github.com/libsndfile/libsamplerate
 [submodule "src/wayland"]
 	path = src/wayland
-	url = https://github.com/wayland-project/wayland
+	url = https://gitlab.freedesktop.org/wayland/wayland
 [submodule "src/bluez"]
 	path = src/bluez
 	url = https://github.com/bluez/bluez

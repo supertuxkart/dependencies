@@ -283,9 +283,10 @@ jobs:
         run: |
           cd src/astc-encoder
           sed -i '/-Werror/d' Source/cmake_core.cmake
-          sed -i 's|${ASTC_TARGET}-static|astcenc|g' Source/cmake_core.cmake
           if [ ${{ matrix.platform }} = "MacOSX" ]; then
-            sed -i 's|STATIC|SHARED|g' Source/cmake_core.cmake
+            sed -i 's|${ASTCENC_TARGET}-shared|astcenc|g' Source/cmake_core.cmake
+          else
+            sed -i 's|${ASTCENC_TARGET}-static|astcenc|g' Source/cmake_core.cmake
           fi
           mkdir build
           cd build
@@ -295,17 +296,17 @@ jobs:
             -DCCTOOLS_ARCH=${{ matrix.arch }} \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
-            -DISA_SSE41=ON -DNO_INVARIANCE=ON -DCLI=OFF \
-            -DCMAKE_C_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1' \
-            -DCMAKE_CXX_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1'
+            -DASTCENC_ISA_SSE41=ON -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
+            -DASTCENC_UNIVERSAL_BUILD=OFF -DASTCENC_SHAREDLIB=ON \
+            -DCMAKE_C_FLAGS='-O3' -DCMAKE_CXX_FLAGS='-O3'
           else
             cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} \
             -DCCTOOLS_ARCH=${{ matrix.arch }} \
             -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
-            -DISA_NEON=ON -DNO_INVARIANCE=ON -DCLI=OFF \
-            -DCMAKE_C_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1' \
-            -DCMAKE_CXX_FLAGS='-O3 -DASTCENC_DYNAMIC_LIBRARY=1'
+            -DASTCENC_ISA_NEON=ON -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
+            -DASTCENC_UNIVERSAL_BUILD=OFF -DASTCENC_SHAREDLIB=ON \
+            -DCMAKE_C_FLAGS='-O3' -DCMAKE_CXX_FLAGS='-O3'
           fi
           make -j5
           if [ ${{ matrix.platform }} = "MacOSX" ]; then
