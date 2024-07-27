@@ -33,7 +33,7 @@
 	url = https://github.com/webmproject/libvpx
 [submodule "src/sdl2"]
 	path = src/sdl2
-	url = https://github.com/deveee/stk-sdl
+	url = https://github.com/supertuxkart/SDL
 [submodule "src/openal"]
 	path = src/openal
 	url = https://github.com/kcat/openal-soft
