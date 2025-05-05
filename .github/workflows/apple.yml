@@ -447,9 +447,9 @@ jobs:
           cp -rp ../../include ../../../../dependencies-appletvsimulator/include/SDL2
       - name: Add MoltenVK
         run: |
-          wget https://github.com/supertuxkart/dependencies/releases/download/moltenvk/moltenvk-1.2.4.tar.xz
+          wget https://github.com/supertuxkart/dependencies/releases/download/moltenvk/moltenvk-1.3.0.tar.xz
           mkdir moltenvk
-          tar xf moltenvk-1.2.4.tar.xz -C moltenvk
+          tar xf moltenvk-1.3.0.tar.xz -C moltenvk
           for platform in macosx iphoneos iphonesimulator appletvos appletvsimulator; do
             cp -rp moltenvk/include/MoltenVK dependencies-$platform/include
             cp -rp moltenvk/include/vk_video dependencies-$platform/include
