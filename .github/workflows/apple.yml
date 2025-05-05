@@ -455,11 +455,11 @@ jobs:
             cp -rp moltenvk/include/vk_video dependencies-$platform/include
             cp -rp moltenvk/include/vulkan dependencies-$platform/include
           done
-          cp moltenvk/dylib/macOS/libMoltenVK.dylib dependencies-macosx/lib
-          cp moltenvk/MoltenVK.xcframework/ios-arm64/libMoltenVK.a dependencies-iphoneos/lib
-          cp moltenvk/MoltenVK.xcframework/ios-arm64_x86_64-simulator/libMoltenVK.a dependencies-iphonesimulator/lib
-          cp moltenvk/MoltenVK.xcframework/tvos-arm64_arm64e/libMoltenVK.a dependencies-appletvos/lib
-          cp moltenvk/MoltenVK.xcframework/tvos-arm64_x86_64-simulator/libMoltenVK.a dependencies-appletvsimulator/lib
+          cp moltenvk/dynamic/dylib/macOS/libMoltenVK.dylib dependencies-macosx/lib
+          cp moltenvk/static/MoltenVK.xcframework/ios-arm64/libMoltenVK.a dependencies-iphoneos/lib
+          cp moltenvk/static/MoltenVK.xcframework/ios-arm64_x86_64-simulator/libMoltenVK.a dependencies-iphonesimulator/lib
+          cp moltenvk/static/MoltenVK.xcframework/tvos-arm64_arm64e/libMoltenVK.a dependencies-appletvos/lib
+          cp moltenvk/static/MoltenVK.xcframework/tvos-arm64_x86_64-simulator/libMoltenVK.a dependencies-appletvsimulator/lib
       - name: Archive
         run: |
           tar -cJf dependencies-macosx.tar.xz dependencies-macosx
