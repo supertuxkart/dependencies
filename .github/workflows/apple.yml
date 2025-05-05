@@ -124,7 +124,7 @@ jobs:
           make -j5
           make install
           if [ ${{ matrix.platform }} = "MacOSX" ]; then
-            cp -a lib/libcurl.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
+            cp -a lib/libcurl*.dylib $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
           fi
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
