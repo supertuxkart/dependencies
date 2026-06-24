@@ -98,7 +98,8 @@ jobs:
           cd build
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
-          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }}
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DZLIB_BUILD_TESTING=OFF
           make -j4
           dll2lib.sh ${{ env.dlltool_arch }} libzlib.dll
           cp libzlib.dll libzlib.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin

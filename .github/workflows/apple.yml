@@ -68,7 +68,8 @@ jobs:
           cd build
           cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} -DCCTOOLS_ARCH=${{ matrix.arch }} \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \
-          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} \
+          -DZLIB_BUILD_TESTING=OFF
           ../../../build_tools/fix_rpath.py $(pwd)
           make -j5
           if [ ${{ matrix.platform }} = "MacOSX" ]; then
