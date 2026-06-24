@@ -105,12 +105,30 @@ jobs:
           cd src/curl
           mkdir build
           cd build
+
           # Fix old Mac without HAVE_CLOCK_GETTIME_MONOTONIC
           if [ ${{ matrix.platform }} = "MacOSX" ] && [ ${{ matrix.arch }} = "x86_64" ]; then
             wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz
             tar xf MacOSX10.9.sdk.tar.xz
             extra_flags="-isysroot $(pwd)/MacOSX10.9.sdk"
+          # Set sysroot to avoid looking for the host's linux-specific headers
+          else
+            if [ ${{ matrix.platform }} = "MacOSX" ]; then
+              SDK_NAME="MacOSX.sdk"
+            elif [ ${{ matrix.platform }} = "iPhoneOS" ]; then
+              SDK_NAME="iPhoneOS.sdk"
+            elif [ ${{ matrix.platform }} = "iPhoneSimulator" ]; then
+              SDK_NAME="iPhoneSimulator.sdk"
+            elif [ ${{ matrix.platform }} = "AppleTVOS" ]; then
+              SDK_NAME="AppleTVOS.sdk"
+            elif [ ${{ matrix.platform }} = "AppleTVSimulator" ]; then
+              SDK_NAME="AppleTVSimulator.sdk"
+            fi
+
+            SYSROOT_PATH="/opt/cctools/sdk/${SDK_NAME}"
+            extra_flags="-isysroot ${SYSROOT_PATH} --sysroot=${SYSROOT_PATH}"
           fi
+
           # -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none because STK includes its own
           cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} -DCCTOOLS_ARCH=${{ matrix.arch }} \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-cctools.cmake \

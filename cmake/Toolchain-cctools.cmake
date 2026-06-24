@@ -23,8 +23,6 @@ SET(CMAKE_MACOSX_RPATH TRUE)
 
 # here is the target environment located
 SET(CMAKE_FIND_ROOT_PATH ${CMAKE_INSTALL_PREFIX} ${CCTOOLS_PREFIX}/sdk/${CCTOOLS_PLATFORM}.sdk)
-# We also need to indicate where to look for system libraries
-SET(CMAKE_SYSROOT ${CCTOOLS_PREFIX}/sdk/${CCTOOLS_PLATFORM}.sdk)
 
 # adjust the default behaviour of the FIND_XXX() commands:
 # search headers and libraries in the target environment, search
