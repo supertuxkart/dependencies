@@ -101,10 +101,10 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
           -DZLIB_BUILD_TESTING=OFF
           make -j4
-          dll2lib.sh ${{ env.dlltool_arch }} libzlib.dll
-          cp libzlib.dll libzlib.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
+          dll2lib.sh ${{ env.dlltool_arch }} libz.dll
+          cp libz.dll libz.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin
           # Windows finds only zlib.lib
-          cp libzlib.lib $HOME/dependencies-win-${{ matrix.arch }}/lib/zlib.lib
+          cp libz.lib $HOME/dependencies-win-${{ matrix.arch }}/lib/zlib.lib
       - name: Build Mbed TLS
         run: |
           cd src/mbedtls
@@ -154,6 +154,7 @@ jobs:
           -DCURL_USE_MBEDTLS=ON -DUSE_ZLIB=ON \
           -DCURL_USE_OPENSSL=OFF -DCURL_USE_LIBSSH=OFF -DCURL_USE_LIBSSH2=OFF \
           -DCURL_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
+          -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF \
           -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none
           make -j4
           make install
