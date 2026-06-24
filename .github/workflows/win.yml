@@ -144,13 +144,15 @@ jobs:
           cd src/curl
           mkdir build
           cd build
-          # -DCURL_TARGET_WINDOWS_VERSION=0x0501 for Windows XP
+          # -DCURL_TARGET_WINDOWS_VERSION=0x0600 for Windows Vista or higher
+          # TODO: Either add a patch for XP support here, or commit to dropping
+          #       XP support and remove the other XP workarounds present in this file
           # -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none because STK includes its own
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
           -DBUILD_TESTING=OFF -DBUILD_CURL_EXE=OFF \
-          -DCURL_STATIC_CRT=ON -DCURL_TARGET_WINDOWS_VERSION=0x0501 \
+          -DCURL_STATIC_CRT=ON -DCURL_TARGET_WINDOWS_VERSION=0x0600 \
           -DCURL_USE_MBEDTLS=ON -DUSE_ZLIB=ON \
           -DCURL_USE_OPENSSL=OFF -DCURL_USE_LIBSSH=OFF -DCURL_USE_LIBSSH2=OFF \
           -DCURL_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
