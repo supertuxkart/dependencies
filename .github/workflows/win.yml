@@ -479,9 +479,7 @@ jobs:
           cd build
           # We require SSE4.1 (x86) or NEON (arm*) for astc-encoder
           EXTRA_FLAGS=""
-          if [ ${{ matrix.arch }} = "armv7" ]; then
-            EXTRA_FLAGS="-DASTCENC_ISA_NEON=OFF"
-          elif [ ${{ matrix.arch }} = "aarch64" ]; then
+          if [ ${{ matrix.arch }} = "armv7" ] || [ ${{ matrix.arch }} = "aarch64" ]; then
             EXTRA_FLAGS="-DASTCENC_ISA_NEON=ON"
           else
             if [ ${{ matrix.arch }} = "i686" ]; then
