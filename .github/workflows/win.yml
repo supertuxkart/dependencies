@@ -350,11 +350,12 @@ jobs:
           --enable-vp9 \
           --enable-vp9-highbitdepth \
           --enable-vp9-temporal-denoising
-          if [ ${{ matrix.arch }} = "armv7" ] || [ ${{ matrix.arch }} = "aarch64" ]; then
-            sed -i 's/-Wl,--no-undefined/-Wl,-undefined,error/g' Makefile
-            sed -i 's/-Wl,-soname,$$(SONAME)//g' Makefile
-            sed -i 's/-Wl,--version-script,$$(EXPORTS_FILE) /-Wl,-pdb=libvpx.pdb /g' Makefile
-          fi
+
+          # Strip GCC specific linker commands
+          sed -i 's/-Wl,--no-undefined/-Wl,-undefined,error/g' Makefile
+          sed -i 's/-Wl,-soname,$$(SONAME)//g' Makefile
+          sed -i 's/-Wl,--version-script,$$(EXPORTS_FILE) /-Wl,-pdb=libvpx.pdb /g' Makefile
+
           make -j4
           make install
           rm -f $HOME/dependencies-win-${{ matrix.arch }}/lib/libvpx*
