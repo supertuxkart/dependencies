@@ -60,22 +60,10 @@ jobs:
       - name: Get LLVM MinGW
         run: |
           sudo cp build_tools/dll2lib.sh /usr/local/bin
-          wget https://github.com/mstorsjo/llvm-mingw/releases/download/20210423/llvm-mingw-20210423-msvcrt-ubuntu-18.04-x86_64.tar.xz -P $HOME
+          wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260616/llvm-mingw-20260616-msvcrt-ubuntu-22.04-x86_64.tar.xz -P $HOME
           cd $HOME
-          tar xf llvm-mingw-20210423-msvcrt-ubuntu-18.04-x86_64.tar.xz
-          mv llvm-mingw-20210423-msvcrt-ubuntu-18.04-x86_64 llvm-mingw
-      - name: Set up MinGW for x86 or x64
-        if: ${{ matrix.arch == 'i686' || matrix.arch == 'x86_64' }}
-        run: |
-          cd /
-          sudo mkdir -p /data/mxe/usr
-          cd /data/mxe/usr
-          # It's compiled from https://github.com/mxe/mxe
-          sudo wget https://github.com/supertuxkart/dependencies/releases/download/preview/mxe_static_mingw.zip
-          sudo unzip mxe_static_mingw.zip
-          sudo rm mxe_static_mingw.zip
-          # For libfl.so.2
-          sudo apt install -y libfl-dev
+          tar xf llvm-mingw-20260616-msvcrt-ubuntu-22.04-x86_64.tar.xz
+          mv llvm-mingw-20260616-msvcrt-ubuntu-22.04-x86_64 llvm-mingw
       - name: Restore timestamps
         run: |
           cd src
@@ -110,9 +98,6 @@ jobs:
           cd src/mbedtls
           # Fix C99 error
           sed -i 's/set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")//g' CMakeLists.txt
-          # Windows XP compatibility
-          sed -i 's/if defined(_TRUNCATE)/if 0/g' library/platform.c
-          patch -p1 <../../patches/mbedtls-windows_xp.diff
           if [ ${{ matrix.arch }} = "i686" ]; then
             sed -i 's/#define MBEDTLS_AESNI_C//g' "include/mbedtls/mbedtls_config.h"
           fi
@@ -131,7 +116,7 @@ jobs:
           -DCMAKE_C_FLAGS=$EXTRA_CFLAGS
           make -j4
           make install
-          rm -rf $HOME/dependencies-${{ matrix.sysroot }}/cmake
+          rm -rf $HOME/dependencies-${{ matrix.arch }}/cmake
           cd library
           dll2lib.sh ${{ env.dlltool_arch }} libmbedcrypto.dll
           dll2lib.sh ${{ env.dlltool_arch }} libmbedx509.dll
@@ -145,8 +130,6 @@ jobs:
           mkdir build
           cd build
           # -DCURL_TARGET_WINDOWS_VERSION=0x0600 for Windows Vista or higher
-          # TODO: Either add a patch for XP support here, or commit to dropping
-          #       XP support and remove the other XP workarounds present in this file
           # -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none because STK includes its own
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
@@ -322,8 +305,6 @@ jobs:
           touch -r ../README.md $HOME/dependencies-win-${{ matrix.arch }}/include/jconfig.h
       - name: Build libvpx
         run: |
-          # We use clang only for aarch64 because staticially linking winpthread
-          # leads to GetTickCount64 which only available in > vista
           cd src/libvpx
           patch -p1 <../../patches/libvpx-win-configure.patch
           # Fix for clang
@@ -337,25 +318,22 @@ jobs:
             EXTRA_CFLAGS="-mstackrealign"
             #EXTRA_CFLAGS="-mstackrealign -gcodeview"
             _runtimecpu="--enable-runtime-cpu-detect"
-            _compiler=/data/mxe/usr/bin/${{ matrix.arch }}-w64-mingw32.static.posix.dw2-
           elif [ ${{ matrix.arch }} = "armv7" ]; then
             _targetarch="armv7-win32-gcc"
             EXTRA_CFLAGS="-gcodeview"
             # Arm doesn't support runtime cpu detection
             _runtimecpu="--disable-runtime-cpu-detect"
-            _compiler=$HOME/llvm-mingw/bin/${{ matrix.arch }}-w64-mingw32-
           elif [ ${{ matrix.arch }} = "aarch64" ]; then
             _targetarch="arm64-win64-gcc"
             EXTRA_CFLAGS="-gcodeview"
             # Arm doesn't support runtime cpu detection
             _runtimecpu="--disable-runtime-cpu-detect"
-            _compiler=$HOME/llvm-mingw/bin/${{ matrix.arch }}-w64-mingw32-
           else
             _targetarch="x86_64-win64-gcc"
             #EXTRA_CFLAGS="-gcodeview"
             _runtimecpu="--enable-runtime-cpu-detect"
-            _compiler=/data/mxe/usr/bin/${{ matrix.arch }}-w64-mingw32.static.posix.seh-
           fi
+          _compiler=$HOME/llvm-mingw/bin/${{ matrix.arch }}-w64-mingw32-
           LDFLAGS="-static" \
           CFLAGS="$EXTRA_CFLAGS -fno-asynchronous-unwind-tables" \
           CROSS=${_compiler} ../configure \
@@ -396,8 +374,6 @@ jobs:
       - name: Build SDL2
         run: |
           cd src/sdl2
-          # Windows XP compatibility
-          sed -i 's/defined(__WINRT__) || defined(__GDK__)/0/g' src/audio/wasapi/SDL_wasapi.c
           mkdir build
           cd build
           # Sensor is causing problems in msvc debugger
@@ -416,40 +392,29 @@ jobs:
       - name: Build OpenAL
         run: |
           cd src/openal
+          mkdir build
           cd build
+
+          EXTRA_FLAGS=""
           if [ ${{ matrix.arch }} = "i686" ]; then
             # OpenAL fails to compile with only -DALSOFT_ENABLE_SSE2_CODEGEN
             # Need to disable all SSE completely
-            cmake .. -DMXE_PREFIX=/data/mxe/usr \
-            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
-            -DALSOFT_CPUEXT_SSE=OFF -DALSOFT_CPUEXT_SSE2=OFF -DALSOFT_CPUEXT_SSE3=OFF \
+            EXTRA_FLAGS="-DALSOFT_CPUEXT_SSE=OFF -DALSOFT_CPUEXT_SSE2=OFF -DALSOFT_CPUEXT_SSE3=OFF \
             -DALSOFT_CPUEXT_SSE4_1=OFF -DALSOFT_ENABLE_SSE_CODEGEN=OFF \
-            -DALSOFT_ENABLE_SSE2_CODEGEN=OFF -DCMAKE_DLLTOOL="" -DALSOFT_BACKEND_PIPEWIRE=OFF \
-            -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_FLAGS="-std=c++20"
-          elif [ ${{ matrix.arch }} = "armv7" ] || [ ${{ matrix.arch }} = "aarch64" ]; then
-            # Without -DCMAKE_DLLTOOL="": error: no target machine specified when llvm-dlltool
-            # We generate .lib ourselves later anyway
-            cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
-            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
-            -DCMAKE_DLLTOOL="" -DALSOFT_BACKEND_PIPEWIRE=OFF \
-            -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_FLAGS="-std=c++20"
-          else
-            cmake .. -DMXE_PREFIX=/data/mxe/usr \
-            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
-            -DCMAKE_DLLTOOL="" -DALSOFT_BACKEND_PIPEWIRE=OFF \
-            -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_FLAGS="-std=c++20"
+            -DALSOFT_ENABLE_SSE2_CODEGEN=OFF"
           fi
+
+          # Without -DCMAKE_DLLTOOL="": error: no target machine specified when llvm-dlltool
+          # We generate .lib ourselves later anyway
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
+          -DCMAKE_DLLTOOL="" -DALSOFT_BACKEND_PIPEWIRE=OFF \
+          -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_FLAGS="-std=c++20" \
+          $EXTRA_FLAGS
+
           make -j4
-          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
-            # Without stripping it's 2xMB when using GNU Mingw
-            strip OpenAL32.dll
-          fi
           dll2lib.sh ${{ env.dlltool_arch }} OpenAL32.dll
           make install
           cp OpenAL32.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
@@ -469,19 +434,13 @@ jobs:
           fi
           mkdir build
           cd build
-          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
-            _toolchain_file=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake
-          else
-            _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
-          fi
-          cmake .. -DMXE_PREFIX=/data/mxe/usr \
-          -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
+
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=${_toolchain_file} \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }}
           make -j4
-          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
-            strip libopenglrecorder.dll
-          fi
+
           # Use dll2lib.sh will export Unwind symbols which will conflict libc++.a
           $HOME/llvm-mingw/bin/llvm-dlltool -m ${{ env.dlltool_arch }} -d ../openglrecorder.def -D libopenglrecorder.dll -l libopenglrecorder.lib
           cp libopenglrecorder.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
@@ -516,29 +475,28 @@ jobs:
           mkdir build
           cd build
           # We require SSE4.1 (x86) or NEON (arm*) for astc-encoder
+          EXTRA_FLAGS=""
           if [ ${{ matrix.arch }} = "armv7" ]; then
-            cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
-            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DASTCENC_ISA_NEON=OFF -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
-            -DASTCENC_SHAREDLIB=ON
+            EXTRA_FLAGS="-DASTCENC_ISA_NEON=OFF"
           elif [ ${{ matrix.arch }} = "aarch64" ]; then
-            cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
-            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DASTCENC_ISA_NEON=ON -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
-            -DASTCENC_SHAREDLIB=ON
+            EXTRA_FLAGS="-DASTCENC_ISA_NEON=ON"
           else
             if [ ${{ matrix.arch }} = "i686" ]; then
               sed -i 's/_mm_popcnt_u64/__builtin_popcountll/g' ../Source/astcenc_vecmathlib_sse_4.h
             fi
             sed -i 's/_mm_round_ps(a.m, flags)/_mm_round_ps(a.m, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC)/g' ../Source/astcenc_vecmathlib_sse_4.h
-            cmake .. -DMXE_PREFIX=/data/mxe/usr \
-            -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
-            -DASTCENC_ISA_SSE41=ON -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
-            -DASTCENC_SHAREDLIB=ON -DCMAKE_C_FLAGS='-O2' -DCMAKE_CXX_FLAGS='-O2'
+
+            EXTRA_FLAGS="-DASTCENC_ISA_SSE41=ON \
+            -DCMAKE_C_FLAGS=-O2 -DCMAKE_CXX_FLAGS=-O2"
           fi
+
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+          -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
+          -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
+          -DASTCENC_INVARIANCE=OFF -DASTCENC_CLI=OFF \
+          -DASTCENC_SHAREDLIB=ON \
+          $EXTRA_FLAGS
+
           make -j4
           dll2lib.sh ${{ env.dlltool_arch }} Source/libastcenc.dll
           cp Source/libastcenc.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
@@ -549,16 +507,12 @@ jobs:
         run: |
           cd src/shaderc
           utils/git-sync-deps
-          if [ ${{ matrix.arch }} = "i686" ] || [ ${{ matrix.arch }} = "x86_64" ]; then
-            _toolchain_file=../../../cmake/Toolchain-mxe-${{ matrix.arch }}.cmake
-            sed -i 's/(defined(MINGW_HAS_SECURE_API) && MINGW_HAS_SECURE_API)/0/g' third_party/glslang/glslang/Include/Common.h
-          else
-            _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
-          fi
           mkdir build
           cd build
-          cmake .. -DMXE_PREFIX=/data/mxe/usr \
-          -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
+
+          _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
+
+          cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=${_toolchain_file} \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
           -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_INSTALL=1 \
