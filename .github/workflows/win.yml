@@ -510,6 +510,8 @@ jobs:
         run: |
           cd src/shaderc
           utils/git-sync-deps
+          # Fix a buggy makefile
+          patch -p1 <../../patches/shaderc-glslang-makefile.patch
           mkdir build
           cd build
 
