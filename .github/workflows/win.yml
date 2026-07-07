@@ -375,7 +375,7 @@ jobs:
       - name: Build SDL2
         run: |
           cd src/sdl2
-          # OpenAL already has a build directory
+          mkdir build
           cd build
           # Sensor is causing problems in msvc debugger
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
@@ -393,7 +393,7 @@ jobs:
       - name: Build OpenAL
         run: |
           cd src/openal
-          mkdir build
+          # OpenAL already has a build directory
           cd build
 
           EXTRA_FLAGS=""
