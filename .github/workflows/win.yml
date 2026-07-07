@@ -393,6 +393,10 @@ jobs:
       - name: Build OpenAL
         run: |
           cd src/openal
+          # -Wfunction-effects causes issues compiling the library
+          sed -i 's/-Werror=function-effects//g' CMakeLists.txt
+          sed -i 's/-Wfunction-effects//g' CMakeLists.txt
+
           # OpenAL already has a build directory
           cd build
 
