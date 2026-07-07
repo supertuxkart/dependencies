@@ -11,8 +11,11 @@ SET(CMAKE_RC_COMPILER ${LLVM_PREFIX}/bin/${LLVM_ARCH}-w64-mingw32-windres)
 SET(CMAKE_SYSTEM_PROCESSOR ${LLVM_ARCH})
 SET(CMAKE_BUILD_TYPE RelWithDebInfo)
 SET(CMAKE_SHARED_LINKER_FLAGS "-static-libgcc -lc++ -Wl,-pdb=")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gcodeview")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gcodeview")
+# See https://github.com/llvm/llvm-project/issues/64278
+if(LLVM_ARCH MATCHES "x86_64" OR LLVM_ARCH MATCHES "i686")
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gcodeview")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gcodeview")
+endif()
 
 # here is the target environment located
 SET(CMAKE_FIND_ROOT_PATH ${LLVM_PREFIX}/generic-w64-mingw32 ${LLVM_PREFIX}/${LLVM_ARCH}-w64-mingw32/bin ${CMAKE_INSTALL_PREFIX})
