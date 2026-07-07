@@ -393,10 +393,6 @@ jobs:
       - name: Build OpenAL
         run: |
           cd src/openal
-          # -Wfunction-effects causes issues compiling the library
-          sed -i 's/-Werror=function-effects//g' CMakeLists.txt
-          sed -i 's/-Wfunction-effects//g' CMakeLists.txt
-
           # OpenAL already has a build directory
           cd build
 
@@ -411,11 +407,13 @@ jobs:
 
           # Without -DCMAKE_DLLTOOL="": error: no target machine specified when llvm-dlltool
           # We generate .lib ourselves later anyway
+          # -Wfunction-effects causes issues compiling the library so we disable it
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
           -DALSOFT_UTILS=OFF -DALSOFT_EXAMPLES=OFF -DALSOFT_NO_CONFIG_UTIL=ON \
           -DCMAKE_DLLTOOL="" -DALSOFT_BACKEND_PIPEWIRE=OFF \
+          -DHAVE_WFUNCTION_EFFECTS=OFF \
           -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_FLAGS="-std=c++20" \
           $EXTRA_FLAGS
 
