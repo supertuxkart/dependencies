@@ -320,12 +320,12 @@ jobs:
             _runtimecpu="--enable-runtime-cpu-detect"
           elif [ ${{ matrix.arch }} = "armv7" ]; then
             _targetarch="armv7-win32-gcc"
-            EXTRA_CFLAGS="-gcodeview"
+            EXTRA_CFLAGS=""
             # Arm doesn't support runtime cpu detection
             _runtimecpu="--disable-runtime-cpu-detect"
           elif [ ${{ matrix.arch }} = "aarch64" ]; then
             _targetarch="arm64-win64-gcc"
-            EXTRA_CFLAGS="-gcodeview"
+            EXTRA_CFLAGS=""
             # Arm doesn't support runtime cpu detection
             _runtimecpu="--disable-runtime-cpu-detect"
           else
