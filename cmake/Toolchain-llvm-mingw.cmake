@@ -10,7 +10,7 @@ SET(CMAKE_CXX_COMPILER ${LLVM_PREFIX}/bin/${LLVM_ARCH}-w64-mingw32-clang++)
 SET(CMAKE_RC_COMPILER ${LLVM_PREFIX}/bin/${LLVM_ARCH}-w64-mingw32-windres)
 SET(CMAKE_SYSTEM_PROCESSOR ${LLVM_ARCH})
 SET(CMAKE_BUILD_TYPE RelWithDebInfo)
-SET(CMAKE_SHARED_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-pdb=")
+SET(CMAKE_SHARED_LINKER_FLAGS "-static-libgcc -lc++ -Wl,-pdb=")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gcodeview")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gcodeview")
 
