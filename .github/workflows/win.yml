@@ -506,6 +506,12 @@ jobs:
           cp Source/libastcenc.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
           cp Source/libastcenc.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           cp -p ../Source/astcenc.h $HOME/dependencies-win-${{ matrix.arch }}/include
+
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 8
+
       - name: Build shaderc
         run: |
           cd src/shaderc
