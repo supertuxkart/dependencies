@@ -527,7 +527,7 @@ jobs:
           -DSKIP_SPIRV_TOOLS_INSTALL=1 -DSPIRV_SKIP_TESTS=1 \
           -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0 \
           -DENABLE_CTEST=0
-          make -j4
+          make -j2
           dll2lib.sh ${{ env.dlltool_arch }} libshaderc/libshaderc_shared.dll
           cp libshaderc/libshaderc_shared.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libshaderc/libshaderc_shared.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
