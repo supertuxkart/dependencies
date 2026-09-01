@@ -12,7 +12,7 @@ jobs:
   build:
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         platform: [iPhoneOS, iPhoneSimulator, AppleTVOS, AppleTVSimulator, MacOSX]
         arch: [arm64, x86_64]
@@ -57,23 +57,6 @@ jobs:
           wget https://github.com/supertuxkart/dependencies/releases/download/cctools/cctools-14.1.tar.xz
           tar xf cctools-14.1.tar.xz
           rm cctools-14.1.tar.xz
-
-      # A bunch of generated tests just to try to find out why the $$$$ curl compilation fail
-      - name: Debug SDK and wrapper
-        if: ${{ matrix.platform == 'iPhoneSimulator' && matrix.arch == 'x86_64' }}
-        run: |
-          set -x
-          ls -la /opt/cctools/sdk/
-
-          cat /opt/cctools/bin/x86_64-iphonesimulator-clang
-
-          SYSROOT=$(grep -o '\-isysroot [^ ]*' /opt/cctools/bin/x86_64-iphonesimulator-clang | awk '{print $2}')
-          echo "wrapper sysroot: $SYSROOT"
-          readlink -f "$SYSROOT"
-          ls "$SYSROOT/usr/include/pthread.h"
-
-          printf '#include <pthread.h>\nint main(void){return 0;}\n' > /tmp/t.c
-          /opt/cctools/bin/x86_64-iphonesimulator-clang -c /tmp/t.c -o /tmp/t.o -v 2>&1 | head -40
 
       - name: Build zlib
         run: |
@@ -151,6 +134,28 @@ jobs:
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
+
+        # More generated tests to investigate the curl compilation fail
+      - name: Debug curl flags
+        if: failure()
+        run: |
+          set -x
+          PLATFORM_LOWER=$(echo "${{ matrix.platform }}" | tr '[:upper:]' '[:lower:]')
+          WRAPPER=/opt/cctools/bin/${{ matrix.arch }}-${PLATFORM_LOWER}-clang
+          cat "$WRAPPER"
+
+          grep CMAKE_C_COMPILER src/curl/build/CMakeCache.txt
+          grep CMAKE_C_FLAGS src/curl/build/CMakeCache.txt
+
+          cat src/curl/build/lib/CMakeFiles/libcurl_static.dir/flags.make
+
+          CFLAGS_LINE=$(sed -n "s/^C_FLAGS = //p" src/curl/build/lib/CMakeFiles/libcurl_static.dir/flags.make)
+          echo "RAW: $CFLAGS_LINE"
+          eval "CURLFLAGS=($CFLAGS_LINE)"
+
+          printf '#include <pthread.h>\nint main(void){return 0;}\n' > /tmp/t2.c
+          "$WRAPPER" "${CURLFLAGS[@]}" -c /tmp/t2.c -o /tmp/t2.o -v 2>&1 | head -60
+
       - name: Build libpng
         run: |
           cd src/libpng
