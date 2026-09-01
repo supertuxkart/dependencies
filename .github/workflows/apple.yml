@@ -111,22 +111,6 @@ jobs:
             wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz
             tar xf MacOSX10.9.sdk.tar.xz
             extra_flags="-isysroot $(pwd)/MacOSX10.9.sdk"
-          # Set sysroot to avoid looking for the host's linux-specific headers
-          else
-            if [ ${{ matrix.platform }} = "MacOSX" ]; then
-              SDK_NAME="MacOSX.sdk"
-            elif [ ${{ matrix.platform }} = "iPhoneOS" ]; then
-              SDK_NAME="iPhoneOS.sdk"
-            elif [ ${{ matrix.platform }} = "iPhoneSimulator" ]; then
-              SDK_NAME="iPhoneSimulator.sdk"
-            elif [ ${{ matrix.platform }} = "AppleTVOS" ]; then
-              SDK_NAME="AppleTVOS.sdk"
-            elif [ ${{ matrix.platform }} = "AppleTVSimulator" ]; then
-              SDK_NAME="AppleTVSimulator.sdk"
-            fi
-
-            SYSROOT_PATH="/opt/cctools/sdk/${SDK_NAME}"
-            extra_flags="-isysroot ${SYSROOT_PATH} --sysroot=${SYSROOT_PATH}"
           fi
 
           # -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none because STK includes its own
@@ -139,7 +123,6 @@ jobs:
           -DCURL_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
           -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF \
           -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none \
-          -DCMAKE_SYSROOT="${SYSROOT_PATH}" \
           -DCMAKE_C_FLAGS="$extra_flags" -DCMAKE_CXX_FLAGS="$extra_flags"
           ../../../build_tools/fix_rpath.py $(pwd)/lib
           make -j5
