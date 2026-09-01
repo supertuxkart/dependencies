@@ -124,7 +124,12 @@ jobs:
           -DCURL_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
           -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF \
           -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none \
-          -DCMAKE_C_FLAGS="$extra_flags" -DCMAKE_CXX_FLAGS="$extra_flags"
+          -DCMAKE_C_FLAGS="$extra_flags" -DCMAKE_CXX_FLAGS="$extra_flags" \
+          --trace-expand --trace-redirect=/tmp/cmake_trace.log -Wno-dev
+
+          grep -n "usr/include" /tmp/cmake_trace.log | head -30
+          grep -c "" /tmp/cmake_trace.log
+
           ../../../build_tools/fix_rpath.py $(pwd)/lib
           make -j5
           make install
@@ -134,27 +139,6 @@ jobs:
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
-
-        # More generated tests to investigate the curl compilation fail
-      - name: Debug curl flags
-        if: failure()
-        run: |
-          set -x
-          PLATFORM_LOWER=$(echo "${{ matrix.platform }}" | tr '[:upper:]' '[:lower:]')
-          WRAPPER=/opt/cctools/bin/${{ matrix.arch }}-${PLATFORM_LOWER}-clang
-          cat "$WRAPPER"
-
-          grep CMAKE_C_COMPILER src/curl/build/CMakeCache.txt
-          grep CMAKE_C_FLAGS src/curl/build/CMakeCache.txt
-
-          cat src/curl/build/lib/CMakeFiles/libcurl_static.dir/flags.make
-
-          CFLAGS_LINE=$(sed -n "s/^C_FLAGS = //p" src/curl/build/lib/CMakeFiles/libcurl_static.dir/flags.make)
-          echo "RAW: $CFLAGS_LINE"
-          eval "CURLFLAGS=($CFLAGS_LINE)"
-
-          printf '#include <pthread.h>\nint main(void){return 0;}\n' > /tmp/t2.c
-          "$WRAPPER" "${CURLFLAGS[@]}" -c /tmp/t2.c -o /tmp/t2.o -v 2>&1 | head -60
 
       - name: Build libpng
         run: |
