@@ -57,6 +57,24 @@ jobs:
           wget https://github.com/supertuxkart/dependencies/releases/download/cctools/cctools-14.1.tar.xz
           tar xf cctools-14.1.tar.xz
           rm cctools-14.1.tar.xz
+
+      # A bunch of generated tests just to try to find out why the $$$$ curl compilation fail
+      - name: Debug SDK and wrapper
+        if: ${{ matrix.platform == 'iPhoneSimulator' && matrix.arch == 'x86_64' }}
+        run: |
+          set -x
+          ls -la /opt/cctools/sdk/
+
+          cat /opt/cctools/bin/x86_64-iphonesimulator-clang
+
+          SYSROOT=$(grep -o '\-isysroot [^ ]*' /opt/cctools/bin/x86_64-iphonesimulator-clang | awk '{print $2}')
+          echo "wrapper sysroot: $SYSROOT"
+          readlink -f "$SYSROOT"
+          ls "$SYSROOT/usr/include/pthread.h"
+
+          printf '#include <pthread.h>\nint main(void){return 0;}\n' > /tmp/t.c
+          /opt/cctools/bin/x86_64-iphonesimulator-clang -c /tmp/t.c -o /tmp/t.o -v 2>&1 | head -40
+
       - name: Build zlib
         run: |
           cd src/zlib
