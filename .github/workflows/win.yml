@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        arch: [i686, x86_64, armv7, aarch64]
+        arch: [i686, x86_64, aarch64]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.5.0
@@ -45,10 +45,6 @@ jobs:
         if: ${{ matrix.arch == 'x86_64' }}
         run: |
           echo "dlltool_arch=i386:x86-64" >> $GITHUB_ENV
-      - name: Setting up llvm-dlltool arch for armv7
-        if: ${{ matrix.arch == 'armv7' }}
-        run: |
-          echo "dlltool_arch=arm" >> $GITHUB_ENV
       - name: Setting up llvm-dlltool arch for aarch64
         if: ${{ matrix.arch == 'aarch64' }}
         run: |
@@ -100,10 +96,6 @@ jobs:
           mkdir build
           cd build
           unset EXTRA_CFLAGS
-          if [ ${{ matrix.arch }} = "armv7" ]; then
-            # Required for armv7 build, otherwise including bn_mul.h fails
-            EXTRA_CFLAGS="-DMULADDC_CANNOT_USE_R7=0"
-          fi
           cmake .. -DLLVM_ARCH=${{ matrix.arch }} -DLLVM_PREFIX=$HOME/llvm-mingw \
           -DCMAKE_TOOLCHAIN_FILE=../../../cmake/Toolchain-llvm-mingw.cmake \
           -DCMAKE_INSTALL_PREFIX=$HOME/dependencies-win-${{ matrix.arch }} \
@@ -315,11 +307,6 @@ jobs:
             EXTRA_CFLAGS="-mstackrealign"
             #EXTRA_CFLAGS="-mstackrealign -gcodeview"
             _runtimecpu="--enable-runtime-cpu-detect"
-          elif [ ${{ matrix.arch }} = "armv7" ]; then
-            _targetarch="armv7-win32-gcc"
-            EXTRA_CFLAGS=""
-            # Arm doesn't support runtime cpu detection
-            _runtimecpu="--disable-runtime-cpu-detect"
           elif [ ${{ matrix.arch }} = "aarch64" ]; then
             _targetarch="arm64-win64-gcc"
             EXTRA_CFLAGS=""
@@ -476,9 +463,7 @@ jobs:
           cd build
           # We require SSE4.1 (x86) or NEON (arm*) for astc-encoder
           EXTRA_FLAGS=""
-          if [ ${{ matrix.arch }} = "armv7" ]; then
-            EXTRA_FLAGS="-DASTCENC_ISA_NONE=ON -DASTCENC_ISA_NEON=OFF"
-          elif [ ${{ matrix.arch }} = "aarch64" ]; then
+          if [ ${{ matrix.arch }} = "aarch64" ]; then
             EXTRA_FLAGS="-DASTCENC_ISA_NEON=ON"
           else
             if [ ${{ matrix.arch }} = "i686" ]; then
@@ -507,7 +492,7 @@ jobs:
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@master
         with:
-          swap-size-gb: 10
+          swap-size-gb: 8
 
       - name: Build shaderc
         run: |
@@ -517,14 +502,6 @@ jobs:
           patch -p1 <../../patches/shaderc-glslang-makefile.patch
           mkdir build
           cd build
-
-          # The armv7 build fails due to OOM issues even with the extra
-          # swap space, so reduce optimization level to limit memory use.
-          if [ ${{ matrix.arch }} = "armv7" ]; then
-            opt_flags="-O1"
-          else
-            opt_flags="-O3"
-          fi
 
           _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
 
@@ -536,8 +513,7 @@ jobs:
           -DSHADERC_SKIP_TESTS=1 -DSHADERC_SKIP_EXAMPLES=1 \
           -DSPIRV_HEADERS_SKIP_EXAMPLES=1 \
           -DSKIP_SPIRV_TOOLS_INSTALL=1 -DSPIRV_SKIP_TESTS=1 \
-          -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0 \
-          -DCMAKE_C_FLAGS="$opt_flags" -DCMAKE_CXX_FLAGS="$opt_flags"
+          -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0
           make -j2
           dll2lib.sh ${{ env.dlltool_arch }} libshaderc/libshaderc_shared.dll
           cp libshaderc/libshaderc_shared.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
@@ -553,8 +529,8 @@ jobs:
           zip -r $FOLDER/dependencies-win-${{ matrix.arch }}.zip dependencies-win-${{ matrix.arch }}
 
       - name: Upload windows deps
-        if: ${{ (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) ||
-            github.repository_owner != 'supertuxkart' }}
+        if: ${{ (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
+            github.repository_owner == 'supertuxkart' }}
         uses: ncipollo/release-action@v1.11.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
