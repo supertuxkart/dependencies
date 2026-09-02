@@ -538,10 +538,9 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_INSTALL=1 \
           -DSKIP_GLSLANG_INSTALL=1 \
           -DSHADERC_SKIP_TESTS=1 -DSHADERC_SKIP_EXAMPLES=1 \
-          -DSPIRV_HEADERS_SKIP_INSTALL=1 -DSPIRV_HEADERS_SKIP_EXAMPLES=1 \
+          -DSPIRV_HEADERS_SKIP_EXAMPLES=1 \
           -DSKIP_SPIRV_TOOLS_INSTALL=1 -DSPIRV_SKIP_TESTS=1 \
           -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0 \
-          -DENABLE_CTEST=0 \
           -DCMAKE_C_FLAGS="$opt_flags" -DCMAKE_CXX_FLAGS="$opt_flags"
           make -j2
           dll2lib.sh ${{ env.dlltool_arch }} libshaderc/libshaderc_shared.dll
