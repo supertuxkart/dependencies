@@ -57,6 +57,7 @@ jobs:
           wget https://github.com/supertuxkart/dependencies/releases/download/cctools/cctools-14.1.tar.xz
           tar xf cctools-14.1.tar.xz
           rm cctools-14.1.tar.xz
+
       - name: Build zlib
         run: |
           cd src/zlib
@@ -122,8 +123,10 @@ jobs:
           -DCURL_USE_OPENSSL=OFF -DCURL_USE_LIBSSH=OFF -DCURL_USE_LIBSSH2=OFF \
           -DCURL_USE_GSSAPI=OFF -DUSE_NGHTTP2=OFF -DUSE_QUICHE=OFF \
           -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF \
+          -DCURL_ZSTD=OFF -DCURL_BROTLI=OFF \
           -DHTTP_ONLY=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none \
           -DCMAKE_C_FLAGS="$extra_flags" -DCMAKE_CXX_FLAGS="$extra_flags"
+
           ../../../build_tools/fix_rpath.py $(pwd)/lib
           make -j5
           make install
@@ -133,6 +136,7 @@ jobs:
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/cmake
           rm -rf $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib/pkgconfig
+
       - name: Build libpng
         run: |
           cd src/libpng
@@ -360,7 +364,7 @@ jobs:
         with:
           name: dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}
           path: build/*
-          
+
   packaging:
     name: Packaging dependencies
     needs: build
