@@ -511,7 +511,7 @@ jobs:
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@master
         with:
-          swap-size-gb: 8
+          swap-size-gb: 10
 
       - name: Build shaderc
         run: |
@@ -521,6 +521,14 @@ jobs:
           patch -p1 <../../patches/shaderc-glslang-makefile.patch
           mkdir build
           cd build
+
+          # The armv7 build fails due to OOM issues even with the extra
+          # swap space, so reduce optimization level to limit memory use.
+          if [ ${{ matrix.arch }} = "armv7" ]; then
+            opt_flags="-O1"
+          else
+            opt_flags="-O3"
+          fi
 
           _toolchain_file=../../../cmake/Toolchain-llvm-mingw.cmake
 
@@ -533,13 +541,15 @@ jobs:
           -DSPIRV_HEADERS_SKIP_INSTALL=1 -DSPIRV_HEADERS_SKIP_EXAMPLES=1 \
           -DSKIP_SPIRV_TOOLS_INSTALL=1 -DSPIRV_SKIP_TESTS=1 \
           -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0 \
-          -DENABLE_CTEST=0
+          -DENABLE_CTEST=0 \
+          -DCMAKE_C_FLAGS="$opt_flags" -DCMAKE_CXX_FLAGS="$opt_flags"
           make -j2
           dll2lib.sh ${{ env.dlltool_arch }} libshaderc/libshaderc_shared.dll
           cp libshaderc/libshaderc_shared.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libshaderc/libshaderc_shared.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
           cp libshaderc/libshaderc_shared.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           cp -ra ../libshaderc/include/shaderc $HOME/dependencies-win-${{ matrix.arch }}/include
+
       - name: Archive
         run: |
           FOLDER=$(pwd)
