@@ -268,7 +268,7 @@ jobs:
           -DCMAKE_SKIP_INSTALL_RPATH=ON
           make -j5
           make install
-          touch -r ../jerror.h $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/include/jconfig.h
+          touch -r ../src/jerror.h $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/include/jconfig.h
           rm -r $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/bin
       - name: Build libsamplerate
         run: |
