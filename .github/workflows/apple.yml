@@ -324,11 +324,11 @@ jobs:
             cp -a Source/libastcenc.a $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
           fi
           cp -p ../Source/astcenc.h $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/include
+
       - name: Build shaderc
         run: |
           cd src/shaderc
           utils/git-sync-deps
-          curl https://github.com/supertuxkart/stk-code/commit/9ea2f3ff8cd8dea1c1a6d07a9a4a842848b901e6.diff | patch -p3
           mkdir build
           cd build
           cmake .. -DCCTOOLS_PREFIX=/opt/cctools -DCCTOOLS_PLATFORM=${{ matrix.platform }} -DCCTOOLS_ARCH=${{ matrix.arch }} \
@@ -340,7 +340,9 @@ jobs:
           -DSKIP_SPIRV_TOOLS_INSTALL=1 -DSPIRV_SKIP_TESTS=1 \
           -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0 \
           -DENABLE_CTEST=0
+
           sed -i "s#install_name $(pwd)/libshaderc#install_name @rpath#g" libshaderc/CMakeFiles/shaderc_shared.dir/link.txt
+
           make -j4
           ../../../build_tools/fix_rpath.py $(pwd)/libshaderc
           if [ ${{ matrix.platform }} = "MacOSX" ]; then
@@ -349,6 +351,7 @@ jobs:
             cp -a libshaderc/libshaderc_combined.a $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/lib
           fi
           cp -ra ../libshaderc/include/shaderc $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }}/include
+
       - name: Prepare upload
         run: |
           mv $HOME/dependencies-${{ steps.sysroot.outputs.lowercase }}-${{ matrix.arch }} .
