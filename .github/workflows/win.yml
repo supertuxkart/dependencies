@@ -542,12 +542,24 @@ jobs:
           -DSKIP_SPIRV_TOOLS_INSTALL=1 -DSPIRV_SKIP_TESTS=1 \
           -DSPIRV_SKIP_EXECUTABLES=1 -DENABLE_GLSLANG_BINARIES=0 \
           -DCMAKE_C_FLAGS="$opt_flags" -DCMAKE_CXX_FLAGS="$opt_flags"
-          make -j2
+
+          # Reduce memory use for armv7
+          if [ ${{ matrix.arch }} = "armv7" ]; then
+            make -j1
+          else
+            make -j2
+          fi
           dll2lib.sh ${{ env.dlltool_arch }} libshaderc/libshaderc_shared.dll
           cp libshaderc/libshaderc_shared.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
           cp libshaderc/libshaderc_shared.pdb $HOME/dependencies-win-${{ matrix.arch }}/bin 2>/dev/null || :
           cp libshaderc/libshaderc_shared.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           cp -ra ../libshaderc/include/shaderc $HOME/dependencies-win-${{ matrix.arch }}/include
+
+      - name: Measure peak memory
+        if: failure()
+        run: |
+          cd src/shaderc/build
+          /usr/bin/time -v make -j1 glslang 2>&1 | tail -30
 
       - name: Archive
         run: |
