@@ -521,6 +521,14 @@ jobs:
           cp libshaderc/libshaderc_shared.lib $HOME/dependencies-win-${{ matrix.arch }}/lib
           cp -ra ../libshaderc/include/shaderc $HOME/dependencies-win-${{ matrix.arch }}/include
 
+      - name: Copy libc++.dll and libunwind.dll (to fix angelscript bug in mingw)
+        run: |
+          mkdir src/dll && cd src/dll
+          wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260616/llvm-mingw-20260616-ucrt-x86_64.zip
+          unzip llvm-mingw-20260616-ucrt-x86_64.zip
+          cp llvm-mingw-20260616-ucrt-x86_64/${{ matrix.arch }}-w64-mingw32/bin/libc++.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
+          cp llvm-mingw-20260616-ucrt-x86_64/${{ matrix.arch }}-w64-mingw32/bin/libunwind.dll $HOME/dependencies-win-${{ matrix.arch }}/bin
+
       - name: Archive
         run: |
           FOLDER=$(pwd)
