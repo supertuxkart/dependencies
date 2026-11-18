@@ -62,8 +62,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: "dependencies-android-src.tar.xz"
-          tag: ${{ env.release_name }}
+          tag: preview
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
           allowUpdates: true
-          prerelease: ${{ env.release_pre }}
+          prerelease: true
