@@ -49,14 +49,19 @@ jobs:
             find . -exec touch -d "$last_time" {} +
             cd ..
           done
-      - name: Fetch shaderc external deps
+      - name: Fetch shaderc external deps and fix a buggy makefile
         run: |
           cd src/shaderc
           utils/git-sync-deps
+          patch -p1 <../../patches/shaderc-glslang-makefile.patch
           for dir in "third_party/"*
           do
             rm -rf "$dir"/.git 2>/dev/null || :
           done
+      - name: Fetch libadrenotools submodules
+        run: |
+          cd src/libadrenotools
+          git submodule update --init --recursive
       - name: Archive
         run: |
           cd src
